@@ -13,7 +13,8 @@ import {
   StoreIcon,
   ServerIcon,
   PackageSearchIcon,
-  ActivityIcon
+  ActivityIcon,
+  MessageSquareIcon
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
 
@@ -52,6 +53,7 @@ const menuGroups = [
     icon: LayersIcon,
     items: [
       { name: "Analytics", href: "/analytics", icon: BarChart3Icon },
+      { name: "Reviews", href: "/reviews", icon: MessageSquareIcon }
     ]
   }
 ];
