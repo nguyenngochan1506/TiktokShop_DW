@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@heroui/button";
 import { PlusIcon } from "lucide-react";
 import { SourcesTable } from "./sources-table";
+import { CreateSourceModal } from "@/components/create-source-modal";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -18,7 +19,7 @@ export default async function SourcesPage({
         prisma.source_config.findMany({
             skip: skip,
             take: ITEMS_PER_PAGE,
-            orderBy: { id: 'desc' }
+            orderBy: { created_at: 'desc' }
         }),
         prisma.source_config.count()
     ]);
@@ -29,9 +30,9 @@ export default async function SourcesPage({
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Source Configurations</h1>
-                <Button color="primary" startContent={<PlusIcon size={18} />}>
-                    Add Source
-                </Button>
+
+                <CreateSourceModal />
+
             </div>
 
             <SourcesTable sources={sources} totalPages={totalPages} />
