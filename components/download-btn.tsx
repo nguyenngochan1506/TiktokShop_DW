@@ -14,12 +14,13 @@ interface DownloadBtnProps {
 export const DownloadBtn = ({
     data,
     fileName = "export-data",
-    label = "Export Excel",
+    label = "Xuất Excel", // Dịch: Export Excel
     color = "primary",
 }: DownloadBtnProps) => {
     const handleExport = () => {
         if (!data || data.length === 0) {
-            alert("No data to export");
+            // Thay thế alert() bằng console.error theo hướng dẫn
+            console.error("Không có dữ liệu để xuất"); 
             return;
         }
 
@@ -41,6 +42,7 @@ export const DownloadBtn = ({
             startContent={<DownloadIcon size={18} />}
             onPress={handleExport}
             size="sm"
+            className="font-sans"
         >
             {label}
         </Button>

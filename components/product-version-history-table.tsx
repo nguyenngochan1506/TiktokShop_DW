@@ -34,15 +34,15 @@ export const ProductVersionHistoryTable = ({ versions }: { versions: any[] }) =>
 
     return (
         <>
-            <Table aria-label="Version history" removeWrapper>
+            <Table aria-label="Lịch sử phiên bản" removeWrapper className="font-sans">
                 <TableHeader>
-                    <TableColumn>VALID FROM</TableColumn>
-                    <TableColumn>VALID TO</TableColumn>
-                    <TableColumn>STATUS</TableColumn>
-                    <TableColumn>TITLE SNAPSHOT</TableColumn>
-                    <TableColumn align="end">ACTIONS</TableColumn>
+                    <TableColumn>CÓ HIỆU LỰC TỪ</TableColumn>
+                    <TableColumn>KẾT THÚC HIỆU LỰC</TableColumn>
+                    <TableColumn>TRẠNG THÁI</TableColumn>
+                    <TableColumn>ẢNH CHỤP TIÊU ĐỀ</TableColumn>
+                    <TableColumn align="end">HÀNH ĐỘNG</TableColumn>
                 </TableHeader>
-                <TableBody emptyContent="No history data">
+                <TableBody emptyContent="Không có dữ liệu lịch sử">
                     {versions.map((ver: any, idx: number) => (
                         <TableRow key={idx}>
                             <TableCell>
@@ -51,7 +51,7 @@ export const ProductVersionHistoryTable = ({ versions }: { versions: any[] }) =>
                             <TableCell>
                                 {ver.valid_to && new Date(ver.valid_to).getFullYear() < 9000
                                     ? new Date(ver.valid_to).toLocaleString("vi-VN")
-                                    : "∞"}
+                                    : <span className="text-danger font-semibold">∞</span>} {/* Vô hạn và đánh dấu màu */}
                             </TableCell>
                             <TableCell>
                                 <Chip
@@ -59,7 +59,7 @@ export const ProductVersionHistoryTable = ({ versions }: { versions: any[] }) =>
                                     color={ver.is_current ? "success" : "default"}
                                     variant="flat"
                                 >
-                                    {ver.is_current ? "Current" : "Historical"}
+                                    {ver.is_current ? "Hiện tại" : "Lịch sử"}
                                 </Chip>
                             </TableCell>
                             <TableCell>
@@ -71,7 +71,7 @@ export const ProductVersionHistoryTable = ({ versions }: { versions: any[] }) =>
                                 <div className="flex justify-end gap-2">
                                     {/* Chỉ hiện nút Compare nếu không phải là bản ghi cuối cùng (cũ nhất) */}
                                     {idx < versions.length - 1 ? (
-                                        <Tooltip content="Compare with previous version">
+                                        <Tooltip content="So sánh với phiên bản trước">
                                             <Button
                                                 isIconOnly
                                                 size="sm"
@@ -83,7 +83,7 @@ export const ProductVersionHistoryTable = ({ versions }: { versions: any[] }) =>
                                             </Button>
                                         </Tooltip>
                                     ) : (
-                                        <Tooltip content="Original Version (No history)">
+                                        <Tooltip content="Phiên bản gốc (Không có lịch sử cũ hơn)">
                                             <Button isIconOnly size="sm" variant="light" disabled className="opacity-30 cursor-not-allowed">
                                                 <EyeIcon size={18} />
                                             </Button>

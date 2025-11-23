@@ -48,21 +48,21 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+      <h1 className="text-2xl font-bold">Tổng Quan Dashboard</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard 
-          title="Active Sources" 
+          title="Nguồn Dữ Liệu Hoạt Động (active data source)" 
           value={stats.activeSources} 
           icon={<DatabaseIcon className="text-primary" size={24} />} 
         />
         <StatsCard 
-          title="Raw Products" 
+          title="Sản Phẩm Thô (raw product)" 
           value={new Intl.NumberFormat('vi-VN').format(stats.totalProducts)} 
           icon={<PackageIcon className="text-success" size={24} />} 
         />
         <StatsCard 
-          title="Failed Jobs Today" 
+          title="Lỗi Pipeline Hôm Nay" 
           value={stats.failedJobsToday} 
           icon={<AlertCircleIcon className="text-danger" size={24} />} 
         />
@@ -74,7 +74,7 @@ export default async function Dashboard() {
 
         <Card className="lg:col-span-1 min-h-[400px]">
           <CardHeader>
-            <h3 className="font-semibold text-lg">Recent Crawl Activity</h3>
+            <h3 className="font-semibold text-lg">Hoạt Động Crawl Gần Đây</h3>
           </CardHeader>
           <CardBody>
              <RecentLogsTable logs={stats.recentLogs} />

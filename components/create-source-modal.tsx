@@ -32,28 +32,28 @@ export const CreateSourceModal = () => {
 
   return (
     <>
-      <Button onPress={onOpen} color="primary" startContent={<PlusIcon size={18} />}>
-        Add Source
+      <Button onPress={onOpen} color="primary" startContent={<PlusIcon size={18} />} className="font-sans">
+        Thêm Nguồn Dữ Liệu
       </Button>
 
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} placement="top-center">
-        <ModalContent>
+        <ModalContent className="font-sans">
           {(onClose) => (
             <form onSubmit={handleSubmit}>
-              <ModalHeader className="flex flex-col gap-1">Add New Source</ModalHeader>
+              <ModalHeader className="flex flex-col gap-1">Thêm Cấu Hình Nguồn Mới</ModalHeader>
               <ModalBody>
                 {error && <div className="text-danger text-sm">{error}</div>}
                 
                 <Input
                   autoFocus
-                  label="Source Name"
+                  label="Tên Nguồn"
                   name="source_name"
-                  placeholder="e.g. Shopee Electronics"
+                  placeholder="Ví dụ: Shopee Thiết Bị Điện Tử"
                   variant="bordered"
                   isRequired
                 />
                 <Input
-                  label="Base URL"
+                  label="URL Gốc (Base URL)"
                   name="base_url"
                   placeholder="https://shopee.vn/..."
                   variant="bordered"
@@ -61,16 +61,16 @@ export const CreateSourceModal = () => {
                 />
                 <div className="flex py-2 px-1 justify-between">
                   <Checkbox name="is_active" defaultSelected value="true">
-                    Is Active
+                    Đang Hoạt Động
                   </Checkbox>
                 </div>
               </ModalBody>
               <ModalFooter>
                 <Button color="danger" variant="flat" onPress={onClose}>
-                  Cancel
+                  Hủy Bỏ
                 </Button>
                 <Button color="primary" type="submit" isLoading={isLoading}>
-                  Save Config
+                  Lưu Cấu Hình
                 </Button>
               </ModalFooter>
             </form>

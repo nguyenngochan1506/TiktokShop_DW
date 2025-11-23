@@ -14,9 +14,9 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 
 export const ProductHistoryChart = ({ data }: { data: any[] }) => {
     return (
-        <Card className="min-h-[400px]">
+        <Card className="min-h-[400px] font-sans">
             <CardHeader>
-                <h3 className="font-semibold text-lg">Price & Stock History</h3>
+                <h3 className="font-semibold text-lg">Lịch Sử Giá và Tồn Kho</h3>
             </CardHeader>
             <CardBody>
                 <div className="w-full h-[350px]">
@@ -55,7 +55,7 @@ export const ProductHistoryChart = ({ data }: { data: any[] }) => {
                                 type="monotone"
                                 dataKey="price"
                                 stroke="#006FEE"
-                                name="Price (VND)"
+                                name="Giá Bán (VND)" // Dịch tên đường dữ liệu
                                 strokeWidth={2}
                                 dot={false}
                             />
@@ -64,7 +64,7 @@ export const ProductHistoryChart = ({ data }: { data: any[] }) => {
                                 type="monotone"
                                 dataKey="stock"
                                 stroke="#17C964"
-                                name="Stock (Qty)"
+                                name="Tồn Kho (SL)" // Dịch tên đường dữ liệu
                                 strokeWidth={2}
                                 dot={false}
                             />

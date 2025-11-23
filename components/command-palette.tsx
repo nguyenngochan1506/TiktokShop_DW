@@ -25,28 +25,28 @@ import {
 
 // Định nghĩa danh sách các trang khớp với Sidebar
 const APP_ROUTES = [
-  // 1. Monitoring
-  { id: "home", title: "Dashboard", href: "/", icon: HomeIcon, section: "Monitoring" },
-  { id: "logs", title: "Crawl Logs", href: "/logs", icon: FileTextIcon, section: "Monitoring" },
+  // 1. Monitoring (Giám sát)
+  { id: "home", title: "Tổng Quan Dashboard", href: "/", icon: HomeIcon, section: "Giám sát (Monitoring)" },
+  { id: "logs", title: "Lịch Sử Crawl", href: "/logs", icon: FileTextIcon, section: "Giám sát (Monitoring)" },
 
-  // 2. Controller
-  { id: "sources", title: "Source Configs", href: "/sources", icon: ServerIcon, section: "Controller" },
+  // 2. Controller (Điều khiển)
+  { id: "sources", title: "Cấu Hình Nguồn Dữ Liệu", href: "/sources", icon: ServerIcon, section: "Điều khiển (Controller)" },
 
-  // 3. Staging Data
-  { id: "raw", title: "Raw Data", href: "/raw-data", icon: DatabaseIcon, section: "Staging Data" },
-  { id: "products", title: "Cleaned Products", href: "/products", icon: PackageSearchIcon, section: "Staging Data" },
-  { id: "shops", title: "Shops Directory", href: "/shops", icon: StoreIcon, section: "Staging Data" },
+  // 3. Staging Data (Dữ liệu Tạm)
+  { id: "raw", title: "Dữ Liệu Thô (Raw Data)", href: "/raw-data", icon: DatabaseIcon, section: "Dữ liệu Tạm (Staging)" },
+  { id: "products", title: "Sản Phẩm Đã Làm Sạch", href: "/products", icon: PackageSearchIcon, section: "Dữ liệu Tạm (Staging)" },
+  { id: "shops", title: "Danh Mục Cửa Hàng", href: "/shops", icon: StoreIcon, section: "Dữ liệu Tạm (Staging)" },
 
-  // 4. Warehouse
-  { id: "analytics", title: "Analytics", href: "/analytics", icon: BarChart3Icon, section: "Warehouse" },
-  { id: "reviews", title: "Reviews", href: "/reviews", icon: MessageSquareIcon, section: "Warehouse" },
+  // 4. Warehouse (Kho Dữ Liệu)
+  { id: "analytics", title: "Phân Tích Bán Hàng", href: "/analytics", icon: BarChart3Icon, section: "Kho Dữ Liệu (Warehouse)" },
+  { id: "reviews", title: "Đánh Giá Khách Hàng", href: "/reviews", icon: MessageSquareIcon, section: "Kho Dữ Liệu (Warehouse)" },
 
-  // 5. Engineering Tools
-  { id: "playground", title: "SQL Playground", href: "/playground", icon: TerminalIcon, section: "Engineering Tools" },
-  { id: "quality", title: "Data Quality", href: "/data-quality", icon: ShieldCheckIcon, section: "Engineering Tools" },
-  { id: "health", title: "System Health", href: "/system-health", icon: ActivityIcon, section: "Engineering Tools" },
-  { id: "dictionary", title: "Dictionary", href: "/dictionary", icon: BookOpenIcon, section: "Engineering Tools" },
-  { id: "settings", title: "System Settings", href: "/settings", icon: SettingsIcon, section: "Engineering Tools" },
+  // 5. Engineering Tools (Công cụ Kỹ thuật)
+  { id: "playground", title: "SQL Sandbox", href: "/playground", icon: TerminalIcon, section: "Công cụ Kỹ thuật" },
+  { id: "quality", title: "Chất Lượng Dữ Liệu (DQ)", href: "/data-quality", icon: ShieldCheckIcon, section: "Công cụ Kỹ thuật" },
+  { id: "health", title: "Sức Khỏe Hệ Thống", href: "/system-health", icon: ActivityIcon, section: "Công cụ Kỹ thuật" },
+  { id: "dictionary", title: "Từ Điển Dữ Liệu", href: "/dictionary", icon: BookOpenIcon, section: "Công cụ Kỹ thuật" },
+  { id: "settings", title: "Cấu Hình Hệ Thống", href: "/settings", icon: SettingsIcon, section: "Công cụ Kỹ thuật" },
 ];
 
 export const CommandPalette = () => {
@@ -83,11 +83,11 @@ export const CommandPalette = () => {
     <>
       {/* Nút Trigger trên Sidebar */}
       <div 
-        className="hidden md:flex items-center gap-2 cursor-pointer bg-default-100 hover:bg-default-200 px-3 py-1.5 rounded-lg transition-colors border border-default-200 mb-2"
+        className="hidden md:flex items-center gap-2 cursor-pointer bg-default-100 hover:bg-default-200 px-3 py-1.5 rounded-lg transition-colors border border-default-200 mb-2 font-sans"
         onClick={() => setIsOpen(true)}
       >
         <SearchIcon size={14} className="text-default-500"/>
-        <span className="text-small text-default-500 flex-1">Search...</span>
+        <span className="text-small text-default-500 flex-1">Tìm kiếm...</span>
         <Kbd keys={["command"]}>K</Kbd>
       </div>
 
@@ -104,12 +104,12 @@ export const CommandPalette = () => {
         size="lg"
         scrollBehavior="inside"
       >
-        <ModalContent>
+        <ModalContent className="font-sans">
           <ModalBody>
             {/* Input Search */}
             <Input
               autoFocus
-              placeholder="Type to search pages..."
+              placeholder="Gõ để tìm kiếm trang..."
               value={query}
               onValueChange={setQuery}
               startContent={<SearchIcon size={18} className="text-default-400" />}
@@ -123,7 +123,7 @@ export const CommandPalette = () => {
             <div className="max-h-[300px] overflow-y-auto px-2 pb-2">
                 {filteredItems.length === 0 ? (
                     <div className="py-8 text-center text-default-500 text-sm">
-                        No results found for "{query}"
+                        Không tìm thấy kết quả nào cho "{query}"
                     </div>
                 ) : (
                     <Listbox 
@@ -151,10 +151,10 @@ export const CommandPalette = () => {
             
             {/* Footer hint */}
             <div className="bg-default-50 px-4 py-2 text-tiny text-default-400 flex justify-between border-t border-default-100 items-center">
-                <span>Select to navigate</span>
+                <span>Chọn để điều hướng</span>
                 <div className="flex gap-2">
                     <span className="flex items-center gap-1"><Kbd >↑</Kbd><Kbd >↓</Kbd></span>
-                    <span className="flex items-center gap-1"><Kbd >esc</Kbd> close</span>
+                    <span className="flex items-center gap-1"><Kbd >esc</Kbd> đóng</span>
                 </div>
             </div>
           </ModalBody>

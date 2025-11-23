@@ -12,21 +12,21 @@ interface IndexUsageItem {
 export const SlowQueriesTable = ({ data }: { data: IndexUsageItem[] }) => {
   if (data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-success gap-2 py-8">
+      <div className="flex flex-col items-center justify-center h-full text-success gap-2 py-8 font-sans">
         <ZapIcon size={48} />
-        <p>Excellent! No frequent full table scans detected.</p>
+        <p>Tuyệt vời! Không phát hiện thấy các truy vấn quét toàn bộ bảng thường xuyên.</p>
       </div>
     );
   }
 
   return (
-    <Table aria-label="Slow Queries" removeWrapper>
+    <Table aria-label="Truy Vấn Chậm" removeWrapper className="font-sans">
       <TableHeader>
-        <TableColumn>TABLE</TableColumn>
-        <TableColumn>FULL SCANS</TableColumn>
-        <TableColumn>INDEX SCANS</TableColumn>
+        <TableColumn>BẢNG DỮ LIỆU</TableColumn>
+        <TableColumn>FULL SCANS (QUÉT TOÀN BỘ)</TableColumn>
+        <TableColumn>INDEX SCANS (QUÉT CHỈ MỤC)</TableColumn>
       </TableHeader>
-      <TableBody>
+      <TableBody emptyContent="Không có dữ liệu truy vấn chậm">
         {data.map((item, idx) => (
           <TableRow key={idx}>
             <TableCell className="font-mono text-sm">{item.table_name}</TableCell>

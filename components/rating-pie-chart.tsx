@@ -7,9 +7,9 @@ const COLORS = ["#F31260", "#F5A524", "#eab308", "#17C964", "#006FEE"]; // Đỏ
 
 export const RatingPieChart = ({ data }: { data: any[] }) => {
   return (
-    <Card className="h-full min-h-[350px]">
+    <Card className="h-full min-h-[350px] font-sans">
       <CardHeader>
-        <h3 className="font-semibold text-lg">Rating Distribution</h3>
+        <h3 className="font-semibold text-lg">Phân Bố Điểm Đánh Giá (Rating)</h3>
       </CardHeader>
       <CardBody>
         <ResponsiveContainer width="100%" height={300}>
@@ -29,7 +29,7 @@ export const RatingPieChart = ({ data }: { data: any[] }) => {
               ))}
             </Pie>
             <Tooltip 
-                formatter={(value: number) => new Intl.NumberFormat('vi-VN').format(value) + " reviews"}
+                formatter={(value: number) => new Intl.NumberFormat('vi-VN').format(value) + " đánh giá"} // Dịch chuỗi hiển thị số lượng
                 contentStyle={{ backgroundColor: "#1f1f1f", border: "none", borderRadius: "8px" }}
             />
             <Legend verticalAlign="bottom" height={36}/>

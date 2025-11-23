@@ -77,9 +77,9 @@ export default async function ProductDetailPage({
   if (!data) {
     return (
         <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
-            <h2 className="text-xl font-bold text-default-500">Product Not Found in Warehouse</h2>
+            <h2 className="text-xl font-bold text-default-500">Không tìm thấy Sản phẩm trong Warehouse</h2>
             <Link href="/products">
-                <Button color="primary" variant="flat">Back to List</Button>
+                <Button color="primary" variant="flat">Quay lại Danh sách</Button>
             </Link>
         </div>
     );
@@ -94,8 +94,8 @@ export default async function ProductDetailPage({
         </Link>
         <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
-                Product 360 View
-                <Chip size="sm" color="success" variant="flat">Warehouse Data</Chip>
+                Chế độ Xem Toàn diện Sản phẩm (360 View)
+                <Chip size="sm" color="success" variant="flat">Dữ liệu Warehouse</Chip>
             </h1>
             <p className="text-default-500 text-sm font-mono">ID: {decodedId}</p>
         </div>
@@ -107,7 +107,7 @@ export default async function ProductDetailPage({
         {/* Left Column: Product Information */}
         <Card className="lg:col-span-1 h-full">
             <CardHeader>
-                <h3 className="font-semibold text-lg">Current Dimension Info</h3>
+                <h3 className="font-semibold text-lg">Thông tin Dimension Hiện tại</h3>
             </CardHeader>
             <CardBody className="flex flex-col gap-5">
                 <User 
@@ -120,7 +120,7 @@ export default async function ProductDetailPage({
                     <div className="flex items-center justify-between text-sm p-2 bg-default-100 rounded-lg">
                         <div className="flex items-center gap-2 text-default-500">
                             <StoreIcon size={16} />
-                            <span>Seller ID</span>
+                            <span>ID Người Bán</span>
                         </div>
                         <span className="font-mono font-bold">{data.info.seller_id}</span>
                     </div>
@@ -128,16 +128,16 @@ export default async function ProductDetailPage({
                     <div className="flex items-center justify-between text-sm p-2 bg-default-100 rounded-lg">
                         <div className="flex items-center gap-2 text-default-500">
                             <CalendarIcon size={16} />
-                            <span>Valid From</span>
+                            <span>Có hiệu lực từ</span>
                         </div>
                         <span>{data.info.valid_from ? new Date(data.info.valid_from).toLocaleDateString('vi-VN') : 'N/A'}</span>
                     </div>
                 </div>
                 
                 <div className="p-3 border border-default-200 rounded-lg text-sm bg-background">
-                    <p className="font-semibold mb-2 text-default-600">Description Snapshot:</p>
+                    <p className="font-semibold mb-2 text-default-600">Ảnh chụp Mô tả:</p>
                     <p className="line-clamp-[8] text-default-500 leading-relaxed">
-                        {data.info.description || "No description available."}
+                        {data.info.description || "Không có mô tả nào."}
                     </p>
                 </div>
             </CardBody>
@@ -153,12 +153,11 @@ export default async function ProductDetailPage({
       <Card>
         <CardHeader>
             <div className="flex flex-col">
-                <h3 className="font-semibold text-lg">Dimension History Log</h3>
-                <p className="text-small text-default-500">Slowly Changing Dimension (SCD Type 2) tracking</p>
+                <h3 className="font-semibold text-lg">Lịch sử Dimension</h3>
+                <p className="text-small text-default-500">Theo dõi Dimension Thay đổi Chậm (SCD Loại 2)</p>
             </div>
         </CardHeader>
         <CardBody>
-            {/* Component bảng được tách ra để chạy phía Client */}
             <ProductVersionHistoryTable versions={data.versions} />
         </CardBody>
       </Card>

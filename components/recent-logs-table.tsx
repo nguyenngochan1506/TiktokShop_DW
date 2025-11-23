@@ -5,19 +5,19 @@ import { Chip } from "@heroui/chip";
 
 export const RecentLogsTable = ({ logs }: { logs: any[] }) => {
     return (
-        <Table aria-label="Recent logs" removeWrapper>
+        <Table aria-label="Logs gần đây" removeWrapper className="font-sans">
             <TableHeader>
-                <TableColumn>SOURCE_NAME</TableColumn>
-                <TableColumn>SOURCE_ID</TableColumn>
-                <TableColumn>STATUS</TableColumn>
+                <TableColumn>TÊN NGUỒN</TableColumn>
+                <TableColumn>ID NGUỒN</TableColumn>
+                <TableColumn>TRẠNG THÁI</TableColumn>
             </TableHeader>
-            <TableBody emptyContent="No recent activity">
+            <TableBody emptyContent="Không có hoạt động gần đây">
                 {logs.map((log) => (
                     <TableRow key={log.id}>
                         <TableCell>
                             <div className="flex flex-col">
                                 <span className="text-small font-bold">
-                                    {log.source_config?.source_name || "Unknown Source"}
+                                    {log.source_config?.source_name || "Nguồn không rõ"}
                                 </span>
                                 <span className="text-tiny text-default-400">
                                     {log.created_at
@@ -29,7 +29,7 @@ export const RecentLogsTable = ({ logs }: { logs: any[] }) => {
                         <TableCell>
                             <div className="flex flex-col">
                                 <span className="text-small font-bold">
-                                    #{log.source_config?.id || "Unknown Source"}
+                                    #{log.source_config?.id || "Nguồn không rõ"}
                                 </span>
                             </div>
                         </TableCell>
@@ -45,7 +45,7 @@ export const RecentLogsTable = ({ logs }: { logs: any[] }) => {
                                             : "warning"
                                 }
                             >
-                                {log.status}
+                                {log.status === "SUCCESS" ? "THÀNH CÔNG" : log.status === "FAILED" ? "THẤT BẠI" : "ĐANG CHẠY"}
                             </Chip>
                         </TableCell>
                     </TableRow>

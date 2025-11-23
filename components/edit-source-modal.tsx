@@ -41,9 +41,9 @@ export const EditSourceModal = ({ source }: { source: SourceConfig }) => {
 
   return (
     <>
-      <Tooltip content="Edit source">
+      <Tooltip content="Chỉnh sửa nguồn">
         <span 
-          className="text-lg text-default-400 cursor-pointer active:opacity-50 hover:text-primary"
+          className="text-lg text-default-400 cursor-pointer active:opacity-50 hover:text-primary font-sans"
           onClick={onOpen}
         >
           <EditIcon size={18} />
@@ -51,22 +51,22 @@ export const EditSourceModal = ({ source }: { source: SourceConfig }) => {
       </Tooltip>
 
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} placement="top-center">
-        <ModalContent>
+        <ModalContent className="font-sans">
           {(onClose) => (
             <form onSubmit={handleSubmit}>
-              <ModalHeader className="flex flex-col gap-1">Edit Source #{source.id}</ModalHeader>
+              <ModalHeader className="flex flex-col gap-1">Chỉnh Sửa Nguồn #{source.id}</ModalHeader>
               <ModalBody>
                 {error && <div className="text-danger text-sm">{error}</div>}
                 
                 <Input
-                  label="Source Name"
+                  label="Tên Nguồn"
                   name="source_name"
                   defaultValue={source.source_name}
                   variant="bordered"
                   isRequired
                 />
                 <Input
-                  label="Base URL"
+                  label="URL Gốc (Base URL)"
                   name="base_url"
                   defaultValue={source.base_url} 
                   variant="bordered"
@@ -78,16 +78,16 @@ export const EditSourceModal = ({ source }: { source: SourceConfig }) => {
                     defaultSelected={source.is_active}
                     value="true"
                   >
-                    Is Active
+                    Đang Hoạt Động
                   </Checkbox>
                 </div>
               </ModalBody>
               <ModalFooter>
                 <Button color="danger" variant="flat" onPress={onClose}>
-                  Cancel
+                  Hủy Bỏ
                 </Button>
                 <Button color="primary" type="submit" isLoading={isLoading}>
-                  Update Config
+                  Cập Nhật Cấu Hình
                 </Button>
               </ModalFooter>
             </form>

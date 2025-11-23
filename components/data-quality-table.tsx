@@ -15,16 +15,16 @@ interface CheckItem {
 
 export const DataQualityTable = ({ checks }: { checks: CheckItem[] }) => {
     return (
-        <Table aria-label="DQ Table" removeWrapper>
+        <Table aria-label="Bảng Chất Lượng Dữ Liệu (DQ)" removeWrapper className="font-sans">
             <TableHeader>
-                <TableColumn>STATUS</TableColumn>
-                <TableColumn>SCOPE</TableColumn>
-                <TableColumn>RULE NAME</TableColumn>
-                <TableColumn>DESCRIPTION</TableColumn>
-                <TableColumn>FAILED RECORDS</TableColumn>
-                <TableColumn>SEVERITY</TableColumn>
+                <TableColumn>TRẠNG THÁI</TableColumn>
+                <TableColumn>PHẠM VI (SCOPE)</TableColumn>
+                <TableColumn>QUY TẮC</TableColumn>
+                <TableColumn>MÔ TẢ</TableColumn>
+                <TableColumn>BẢN GHI LỖI</TableColumn>
+                <TableColumn>MỨC ĐỘ</TableColumn>
             </TableHeader>
-            <TableBody>
+            <TableBody emptyContent="Không có kiểm tra DQ nào được định nghĩa.">
                 {checks.map((check, idx) => (
                     <TableRow key={idx}>
                         <TableCell>
@@ -51,7 +51,9 @@ export const DataQualityTable = ({ checks }: { checks: CheckItem[] }) => {
                                         check.severity === "HIGH" ? "warning" : "default"
                                 }
                             >
-                                {check.severity}
+                                {check.severity === "CRITICAL" ? "NGHIÊM TRỌNG" : 
+                                 check.severity === "HIGH" ? "CAO" :
+                                 check.severity === "MEDIUM" ? "TRUNG BÌNH" : "THẤP"}
                             </Chip>
                         </TableCell>
                     </TableRow>

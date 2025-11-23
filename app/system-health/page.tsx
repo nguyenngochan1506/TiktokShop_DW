@@ -7,14 +7,14 @@ import { SlowQueriesTable } from "@/components/slow-queries-table";
 export default async function SystemHealthPage() {
   const data = await getDatabaseHealth();
 
-  if (!data) return <div>Error loading database stats</div>;
+  if (!data) return <div className="flex items-center justify-center h-full text-lg text-danger-600 font-semibold bg-danger-50 border border-danger-200 rounded-lg p-6">Lỗi khi tải thống kê sức khỏe cơ sở dữ liệu.</div>;
 
   const maxBytes = Math.max(...data.tableStats.map((t: any) => t.total_bytes));
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold flex items-center gap-2">
-        Database Infrastructure Health
+        Sức Khỏe Hạ Tầng Cơ Sở Dữ Liệu
       </h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-primary-50 dark:bg-primary-900/20">
@@ -23,7 +23,7 @@ export default async function SystemHealthPage() {
                     <DatabaseIcon size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-default-500 font-semibold">Total DB Size</p>
+                    <p className="text-sm text-default-500 font-semibold">Tổng Kích Thước DB</p>
                     <h2 className="text-3xl font-bold">{data.dbSize}</h2>
                 </div>
             </CardBody>
@@ -35,9 +35,9 @@ export default async function SystemHealthPage() {
                     <ZapIcon size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-default-500 font-semibold">Cache Hit Ratio</p>
+                    <p className="text-sm text-default-500 font-semibold">Tỷ Lệ Cache Hit</p>
                     <h2 className="text-3xl font-bold">{data.cacheHitRatio.toFixed(2)}%</h2>
-                    <p className="text-xs text-default-400">Target: &gt; 99%</p>
+                    <p className="text-xs text-default-400">Mục tiêu: &gt; 99%</p>
                 </div>
             </CardBody>
         </Card>
@@ -48,9 +48,9 @@ export default async function SystemHealthPage() {
                     <HardDriveIcon size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-default-500 font-semibold">Heavy Tables</p>
+                    <p className="text-sm text-default-500 font-semibold">Bảng Dữ Liệu Lớn</p>
                     <h2 className="text-3xl font-bold">{data.tableStats.length}</h2>
-                    <p className="text-xs text-default-400">Tables monitored</p>
+                    <p className="text-xs text-default-400">Bảng đang được giám sát</p>
                 </div>
             </CardBody>
         </Card>
@@ -60,7 +60,7 @@ export default async function SystemHealthPage() {
         
         <Card className="min-h-[400px]">
             <CardHeader>
-                <h3 className="font-semibold text-lg">Top Largest Tables</h3>
+                <h3 className="font-semibold text-lg">Các Bảng Lớn Nhất</h3>
             </CardHeader>
             <CardBody>
                 <div className="flex flex-col gap-4">
@@ -74,10 +74,10 @@ export default async function SystemHealthPage() {
                                 value={(table.total_bytes / maxBytes) * 100} 
                                 color="primary" 
                                 size="sm"
-                                aria-label="Table Size"
+                                aria-label="Kích Thước Bảng"
                             />
                             <div className="text-tiny text-default-400">
-                                {new Intl.NumberFormat('vi-VN').format(table.row_count)} rows
+                                {new Intl.NumberFormat('vi-VN').format(table.row_count)} dòng
                             </div>
                         </div>
                     ))}
@@ -87,13 +87,13 @@ export default async function SystemHealthPage() {
 
         <Card className="min-h-[400px]">
             <CardHeader>
-                <h3 className="font-semibold text-lg">Performance Warnings (Full Scans)</h3>
+                <h3 className="font-semibold text-lg">Cảnh Báo Hiệu Năng (Full Scans)</h3>
             </CardHeader>
             <CardBody>
                 <SlowQueriesTable data={data.indexUsage} />
                 
                 <div className="mt-4 p-3 bg-default-100 rounded-lg text-xs text-default-500">
-                    <strong>Tip:</strong> If "Full Scans" is high (thousands) compared to "Index Scans", consider adding an INDEX to that table to speed up queries.
+                    <strong>Mẹo:</strong> Nếu "Full Scans" cao (hàng nghìn) so với "Index Scans", hãy cân nhắc thêm INDEX (chỉ mục) vào bảng đó để tăng tốc độ truy vấn.
                 </div>
             </CardBody>
         </Card>

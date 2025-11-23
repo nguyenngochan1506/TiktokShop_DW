@@ -26,7 +26,8 @@ export const ShopsTable = ({ shops, totalPages }: { shops: any[], totalPages: nu
 
   return (
     <Table 
-      aria-label="Shops table"
+      aria-label="Bảng danh mục cửa hàng"
+      className="font-sans"
       bottomContent={
         totalPages > 1 && (
           <div className="flex w-full justify-center">
@@ -36,13 +37,13 @@ export const ShopsTable = ({ shops, totalPages }: { shops: any[], totalPages: nu
       }
     >
       <TableHeader>
-        <TableColumn>SHOP INFO</TableColumn>
-        <TableColumn>RATING</TableColumn>
-        <TableColumn>FOLLOWERS</TableColumn>
-        <TableColumn>PRODUCTS</TableColumn>
-        <TableColumn>REGION</TableColumn>
+        <TableColumn>THÔNG TIN CỬA HÀNG</TableColumn>
+        <TableColumn>ĐIỂM ĐÁNH GIÁ</TableColumn>
+        <TableColumn>NGƯỜI THEO DÕI</TableColumn>
+        <TableColumn>SẢN PHẨM ĐANG BÁN</TableColumn>
+        <TableColumn>KHU VỰC</TableColumn>
       </TableHeader>
-      <TableBody emptyContent="No shops found">
+      <TableBody emptyContent="Không tìm thấy cửa hàng nào">
         {shops.map((shop) => {
             // Xử lý ảnh Logo từ JSON
             const logoData = shop.shop_logo ? (typeof shop.shop_logo === 'string' ? JSON.parse(shop.shop_logo) : shop.shop_logo) : [];
@@ -53,9 +54,9 @@ export const ShopsTable = ({ shops, totalPages }: { shops: any[], totalPages: nu
             <TableRow key={shop.id}>
               <TableCell>
                 <User
-                  avatarProps={{ src: logoUrl, fallback: "SH" }}
+                  avatarProps={{ src: logoUrl, fallback: "CH" }}
                   description={shop.seller_id}
-                  name={shop.shop_name || "Unknown Shop"}
+                  name={shop.shop_name || "Cửa hàng không rõ"}
                 />
               </TableCell>
               <TableCell>

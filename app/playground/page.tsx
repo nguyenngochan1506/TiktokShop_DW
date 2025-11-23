@@ -68,7 +68,7 @@ export default function SqlPlaygroundPage() {
         if (savedHistory) {
             try {
                 setHistory(JSON.parse(savedHistory));
-            } catch (e) { console.error("History parse error", e); }
+            } catch (e) { console.error("Lỗi phân tích lịch sử", e); }
         }
     }, []);
 
@@ -125,7 +125,7 @@ export default function SqlPlaygroundPage() {
                             label: `${schema}.${table}`, // Gợi ý full
                             kind: monaco.languages.CompletionItemKind.Class,
                             insertText: `"${schema}"."${table}"`, // Tự động quote
-                            detail: "Table",
+                            detail: "Bảng",
                             range: range,
                         });
 
@@ -134,7 +134,7 @@ export default function SqlPlaygroundPage() {
                             label: table,
                             kind: monaco.languages.CompletionItemKind.Class,
                             insertText: table,
-                            detail: `Table (${schema})`,
+                            detail: `Bảng (${schema})`,
                             range: range,
                         });
 
@@ -197,10 +197,10 @@ export default function SqlPlaygroundPage() {
         <div className="flex h-[calc(100vh-100px)] gap-4">
             {/* --- LEFT SIDEBAR: SCHEMA & HISTORY --- */}
             <Card className="w-80 flex-none h-full flex flex-col">
-                <Tabs aria-label="Playground Options" fullWidth size="sm" variant="underlined">
+                <Tabs aria-label="Tùy Chọn Sandbox" fullWidth size="sm" variant="underlined">
 
                     {/* TAB 1: DATABASE SCHEMA */}
-                    <Tab key="schema" title={<div className="flex items-center gap-2"><DatabaseIcon size={14} /> Schema</div>}>
+                    <Tab key="schema" title={<div className="flex items-center gap-2"><DatabaseIcon size={14} /> Sơ Đồ Dữ Liệu</div>}>
                         <ScrollShadow className="h-[calc(100vh-180px)] p-2">
                             {/* Level 1: SCHEMA */}
                             <Accordion selectionMode="multiple" isCompact itemClasses={{ title: "font-bold text-sm text-primary" }}>
@@ -238,7 +238,7 @@ export default function SqlPlaygroundPage() {
                                                                 key={col.name}
                                                                 className="group flex items-center justify-between text-xs py-1 px-2 rounded hover:bg-default-100 cursor-pointer transition-colors"
                                                                 onClick={() => insertToEditor(col.name)}
-                                                                title={`Click to insert: ${col.name}`}
+                                                                title={`Nhấn để chèn: ${col.name}`}
                                                             >
                                                                 <div className="flex items-center gap-2 overflow-hidden">
                                                                     {getDataTypeIcon(col.type)}
@@ -261,11 +261,11 @@ export default function SqlPlaygroundPage() {
                         </ScrollShadow>
                     </Tab>
                     {/* TAB 2: QUERY HISTORY */}
-                    <Tab key="history" title={<div className="flex items-center gap-2"><HistoryIcon size={14} /> History</div>}>
+                    <Tab key="history" title={<div className="flex items-center gap-2"><HistoryIcon size={14} /> Lịch Sử Truy Vấn</div>}>
                         <div className="flex flex-col h-full">
                             <div className="flex justify-end p-2 border-b border-default-100">
                                 <Button size="sm" color="danger" variant="light" startContent={<Trash2Icon size={14} />} onPress={clearHistory}>
-                                    Clear All
+                                    Xóa Toàn Bộ
                                 </Button>
                             </div>
                             <ScrollShadow className="h-[calc(100vh-220px)]">
@@ -277,7 +277,7 @@ export default function SqlPlaygroundPage() {
                                     >
                                         <div className="flex justify-between items-start mb-1">
                                             <Chip size="sm" variant="dot" color={item.status === 'success' ? 'success' : 'danger'} className="scale-75 origin-left">
-                                                {item.status}
+                                                {item.status === 'success' ? 'Thành công' : 'Thất bại'}
                                             </Chip>
                                             <span className="text-[10px] text-default-400 flex items-center gap-1">
                                                 <ClockIcon size={10} />
@@ -290,7 +290,7 @@ export default function SqlPlaygroundPage() {
                                     </div>
                                 ))}
                                 {history.length === 0 && (
-                                    <div className="text-center text-default-400 text-sm mt-10">No history yet.</div>
+                                    <div className="text-center text-default-400 text-sm mt-10">Chưa có lịch sử nào.</div>
                                 )}
                             </ScrollShadow>
                         </div>
@@ -303,7 +303,7 @@ export default function SqlPlaygroundPage() {
 
                 {/* Toolbar */}
                 <div className="flex justify-between items-center bg-content1 p-2 rounded-lg border border-default-200">
-                    <h1 className="text-xl font-bold ml-2">SQL Editor</h1>
+                    <h1 className="text-xl font-bold ml-2">Trình Chỉnh Sửa SQL</h1>
                     <div className="flex gap-2">
                         <Button
                             color="danger"
@@ -312,7 +312,7 @@ export default function SqlPlaygroundPage() {
                             onPress={() => setQuery("")}
                             startContent={<EraserIcon size={16} />}
                         >
-                            Clear
+                            Xóa
                         </Button>
                         <Button
                             color="primary"
@@ -321,7 +321,7 @@ export default function SqlPlaygroundPage() {
                             startContent={!isLoading && <PlayIcon size={16} />}
                             size="sm"
                         >
-                            Run Query (Ctrl+Enter)
+                            Chạy Truy Vấn (Ctrl+Enter)
                         </Button>
                     </div>
                 </div>
@@ -358,7 +358,7 @@ export default function SqlPlaygroundPage() {
                     <CardBody className="p-0 h-full">
                         {result.length > 0 ? (
                             <Table
-                                aria-label="Query Results"
+                                aria-label="Kết Quả Truy Vấn"
                                 isHeaderSticky
                                 classNames={{ base: "h-full overflow-auto", table: "h-full" }}
                                 removeWrapper
@@ -386,7 +386,7 @@ export default function SqlPlaygroundPage() {
                             </Table>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-default-400">
-                                {isLoading ? <Spinner label="Executing query..." /> : "No results. Run a query or select from history."}
+                                {isLoading ? <Spinner label="Đang thực thi truy vấn..." /> : "Không có kết quả. Hãy chạy một truy vấn hoặc chọn từ lịch sử."}
                             </div>
                         )}
                     </CardBody>

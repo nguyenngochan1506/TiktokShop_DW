@@ -34,15 +34,16 @@ export default function SettingsEditor({ settings }: { settings: SettingItem[] }
     const res = await updateSetting(key, newValue);
     
     if (res.error) {
-        alert("Failed to save");
+        // Thay thế alert() bằng console.error
+        console.error("Lưu thất bại:", res.error);
     }
     
     setLoadingKeys(prev => ({ ...prev, [key]: false }));
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <Tabs aria-label="Settings Groups" color="primary" variant="underlined">
+    <div className="flex flex-col gap-6 font-sans">
+      <Tabs aria-label="Nhóm Cấu Hình" color="primary" variant="underlined">
         {Object.keys(groupedSettings).map((group) => (
           <Tab key={group} title={group}>
             <Card>
@@ -54,7 +55,7 @@ export default function SettingsEditor({ settings }: { settings: SettingItem[] }
                           <p className="font-bold text-sm">{setting.key}</p>
                           <Chip size="sm" variant="flat" className="text-[10px] h-5">{setting.type}</Chip>
                       </div>
-                      <p className="text-small text-default-500">{setting.description}</p>
+                      <p className="text-small text-default-500">{setting.description || "Không có mô tả."}</p>
                     </div>
 
                     <div className="w-full sm:w-64 flex items-center gap-2">
@@ -64,7 +65,8 @@ export default function SettingsEditor({ settings }: { settings: SettingItem[] }
                           onValueChange={(val) => handleSave(setting.key, String(val))}
                           isDisabled={loadingKeys[setting.key]}
                         >
-                            {setting.value === 'true' ? "Enabled" : "Disabled"}
+                            {/* Dịch nhãn Switch */}
+                            {setting.value === 'true' ? "Đã Bật" : "Đã Tắt"}
                         </Switch>
                       ) : (
                         <div className="flex w-full gap-2">
@@ -79,6 +81,8 @@ export default function SettingsEditor({ settings }: { settings: SettingItem[] }
                                 onBlur={(e) => {
                                     // Optional: Auto save on blur or specific logic
                                 }}
+                                // Placeholder phù hợp
+                                placeholder={setting.type === 'number' ? 'Nhập số' : 'Nhập giá trị'}
                             />
                             <Button 
                                 isIconOnly 
@@ -90,6 +94,7 @@ export default function SettingsEditor({ settings }: { settings: SettingItem[] }
                                    const input = e.target.closest('div')?.querySelector('input');
                                    if(input) handleSave(setting.key, input.value);
                                 }}
+                                title="Lưu"
                             >
                                 <SaveIcon size={16}/>
                             </Button>

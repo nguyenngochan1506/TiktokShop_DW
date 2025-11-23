@@ -18,9 +18,9 @@ interface ChartData {
 
 export const DashboardChart = ({ data }: { data: ChartData[] }) => {
     return (
-        <Card className="lg:col-span-2 min-h-[400px]">
+        <Card className="lg:col-span-2 min-h-[400px] font-sans">
             <CardHeader>
-                <h3 className="font-semibold text-lg">Products Collected (Last 7 Days)</h3>
+                <h3 className="font-semibold text-lg">Số Lượng Sản Phẩm Thu Thập Được (7 Ngày Gần Nhất)</h3>
             </CardHeader>
             <CardBody>
                 <div className="w-full h-[300px]">
@@ -53,7 +53,7 @@ export const DashboardChart = ({ data }: { data: ChartData[] }) => {
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={(value) => `${value}`}
+                                tickFormatter={(value) => `${new Intl.NumberFormat('vi-VN').format(value)}`} // Định dạng số lượng
                             />
                             <Tooltip
                                 contentStyle={{
@@ -62,6 +62,8 @@ export const DashboardChart = ({ data }: { data: ChartData[] }) => {
                                     borderRadius: "8px",
                                 }}
                                 itemStyle={{ color: "#fff" }}
+                                // Thêm nhãn cho Tooltip
+                                formatter={(value: number) => [new Intl.NumberFormat('vi-VN').format(value), "Sản phẩm"]} 
                             />
                             <Area
                                 type="monotone"
@@ -69,6 +71,7 @@ export const DashboardChart = ({ data }: { data: ChartData[] }) => {
                                 stroke="#006FEE"
                                 fillOpacity={1}
                                 fill="url(#colorCount)"
+                                name="Số Lượng Sản Phẩm" // Dịch tên đường dữ liệu
                             />
                         </AreaChart>
                     </ResponsiveContainer>

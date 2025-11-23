@@ -20,7 +20,7 @@ async function getReviewData() {
   // Map lại dữ liệu cho biểu đồ (đảm bảo đủ 1-5 sao)
   const ratingMap = new Map(ratingDistributionRaw.map(r => [r.rating, r.count]));
   const chartData = [1, 2, 3, 4, 5].map(star => ({
-    rating: `${star} Stars`,
+    rating: `${star} Sao`, // Dịch chuỗi hiển thị
     count: ratingMap.get(star) || 0
   }));
 
@@ -52,7 +52,7 @@ export default async function ReviewsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Customer Voice & Reviews</h1>
+      <h1 className="text-2xl font-bold">Ý Kiến & Đánh Giá Khách Hàng</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cột trái: Biểu đồ */}
@@ -66,8 +66,8 @@ export default async function ReviewsPage() {
                 <CardHeader className="flex gap-3">
                     <MessageSquareWarningIcon className="text-danger" />
                     <div className="flex flex-col">
-                        <p className="text-md font-bold">Recent Negative Reviews</p>
-                        <p className="text-small text-default-500">Alerts for 1-2 star ratings</p>
+                        <p className="text-md font-bold">Các Đánh Giá Tiêu Cực Gần Đây</p>
+                        <p className="text-small text-default-500">Cảnh báo cho các đánh giá 1-2 sao</p>
                     </div>
                 </CardHeader>
                 <CardBody>

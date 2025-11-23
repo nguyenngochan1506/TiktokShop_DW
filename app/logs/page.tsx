@@ -30,7 +30,7 @@ export default async function LogsPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Crawling History</h1>
+      <h1 className="text-2xl font-bold">Lịch Sử Crawling Dữ Liệu</h1>
       <LogsTable logs={logs as any} totalPages={totalPages} />
     </div>
   );

@@ -20,7 +20,8 @@ export const BaseProductsTable = ({ products, totalPages }: { products: any[], t
 
   return (
     <Table
-      aria-label="Base products table"
+      aria-label="Bảng sản phẩm cơ sở"
+      className="font-sans"
       bottomContent={
         totalPages > 1 && (
           <div className="flex w-full justify-center">
@@ -37,13 +38,13 @@ export const BaseProductsTable = ({ products, totalPages }: { products: any[], t
       }
     >
       <TableHeader>
-        <TableColumn>PRODUCT</TableColumn>
-        <TableColumn>PRICE</TableColumn>
-        <TableColumn>SOLD</TableColumn>
-        <TableColumn>SELLER</TableColumn>
-        <TableColumn>UPDATED</TableColumn>
+        <TableColumn>SẢN PHẨM</TableColumn>
+        <TableColumn>GIÁ BÁN</TableColumn>
+        <TableColumn>ĐÃ BÁN</TableColumn>
+        <TableColumn>NGƯỜI BÁN</TableColumn>
+        <TableColumn>CẬP NHẬT CUỐI</TableColumn>
       </TableHeader>
-      <TableBody emptyContent="No products found">
+      <TableBody emptyContent="Không tìm thấy sản phẩm nào">
         {products.map((item) => {
           // Logic xử lý ảnh an toàn (Vì JSONB có thể trả về string hoặc array tùy driver/data)
           let images: string[] = [];

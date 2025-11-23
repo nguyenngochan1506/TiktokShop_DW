@@ -49,7 +49,8 @@ export const RawDataTable = ({
     return (
         <>
             <Table
-                aria-label="Raw products table"
+                aria-label="Bảng dữ liệu sản phẩm thô"
+                className="font-sans"
                 bottomContent={
                     totalPages > 1 && (
                         <div className="flex w-full justify-center">
@@ -68,12 +69,12 @@ export const RawDataTable = ({
             >
                 <TableHeader>
                     <TableColumn>ID</TableColumn>
-                    <TableColumn>PRODUCT ID</TableColumn>
-                    <TableColumn>SOURCE FILE</TableColumn>
-                    <TableColumn>LOAD TIME</TableColumn>
-                    <TableColumn>ACTIONS</TableColumn>
+                    <TableColumn>ID SẢN PHẨM</TableColumn>
+                    <TableColumn>FILE NGUỒN</TableColumn>
+                    <TableColumn>THỜI GIAN NẠP</TableColumn>
+                    <TableColumn>HÀNH ĐỘNG</TableColumn>
                 </TableHeader>
-                <TableBody emptyContent="No raw data found">
+                <TableBody emptyContent="Không tìm thấy dữ liệu thô nào">
                     {data.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell>#{item.id}</TableCell>
@@ -87,6 +88,7 @@ export const RawDataTable = ({
                                     color="primary"
                                     isIconOnly
                                     onPress={() => handleViewJson(item.raw_data)}
+                                    title="Xem JSON thô"
                                 >
                                     <EyeIcon size={18} />
                                 </Button>
@@ -103,10 +105,10 @@ export const RawDataTable = ({
                 size="5xl" // Tăng size modal để xem cho thoải mái
                 scrollBehavior="inside"
             >
-                <ModalContent>
+                <ModalContent className="font-sans">
                     {(onClose) => (
                         <>
-                            <ModalHeader className="flex flex-col gap-1">Raw JSON Inspector</ModalHeader>
+                            <ModalHeader className="flex flex-col gap-1">Trình Kiểm Tra JSON Thô</ModalHeader>
                             <ModalBody className="p-0">
                                 {/* p-0 để viewer full viền */}
                                 <div className="min-h-[400px] max-h-[70vh] overflow-auto bg-[#1e1e1e]">
@@ -128,7 +130,7 @@ export const RawDataTable = ({
                             </ModalBody>
                             <ModalFooter>
                                 <Button color="danger" variant="light" onPress={onClose}>
-                                    Close
+                                    Đóng
                                 </Button>
                             </ModalFooter>
                         </>

@@ -17,10 +17,10 @@ export const TextDiffViewer = ({ oldText, newText, label }: TextDiffProps) => {
     // Nếu không có thay đổi
     if (safeOld === safeNew) {
         return (
-            <div className="mb-4">
+            <div className="mb-4 font-sans">
                 <h4 className="text-sm font-semibold text-default-500 mb-1">{label}</h4>
                 <div className="p-3 bg-default-50 rounded-lg text-sm text-default-600 border border-default-200">
-                    {safeNew || <span className="italic text-default-400">Empty</span>}
+                    {safeNew || <span className="italic text-default-400">Trống</span>}
                 </div>
             </div>
         );
@@ -30,10 +30,10 @@ export const TextDiffViewer = ({ oldText, newText, label }: TextDiffProps) => {
     const diff = diffWords(safeOld, safeNew);
 
     return (
-        <div className="mb-4">
+        <div className="mb-4 font-sans">
             <div className="flex justify-between items-center mb-1">
                 <h4 className="text-sm font-semibold text-default-500">{label}</h4>
-                <span className="text-xs px-2 py-0.5 rounded bg-warning-100 text-warning-700">Changed</span>
+                <span className="text-xs px-2 py-0.5 rounded bg-warning-100 text-warning-700">Đã Thay Đổi</span>
             </div>
             <div className="p-3 bg-default-50 rounded-lg text-sm leading-relaxed border border-default-200">
                 {diff.map((part, index) => {

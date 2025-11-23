@@ -29,8 +29,8 @@ const menuGroups = [
     title: "Monitoring",
     icon: ActivityIcon,
     items: [
-      { name: "Dashboard", href: "/", icon: HomeIcon },
-      { name: "Crawl Logs", href: "/logs", icon: FileTextIcon },
+      { name: "Tổng Quan", href: "/", icon: HomeIcon },
+      { name: "Lịch Sử Crawl", href: "/logs", icon: FileTextIcon },
     ]
   },
   {
@@ -38,17 +38,17 @@ const menuGroups = [
     title: "Controller",
     icon: SettingsIcon,
     items: [
-      { name: "Source Configs", href: "/sources", icon: ServerIcon },
+      { name: "Cấu Hình Datasource", href: "/sources", icon: ServerIcon },
     ]
   },
   {
     key: "staging",
-    title: "Staging Data",
+    title: "Staging",
     icon: DatabaseIcon,
     items: [
-      { name: "Raw Data", href: "/raw-data", icon: DatabaseIcon },
-      { name: "Cleaned Products", href: "/products", icon: PackageSearchIcon },
-      { name: "Shops Directory", href: "/shops", icon: StoreIcon },
+      { name: "Dữ Liệu Thô", href: "/raw-data", icon: DatabaseIcon },
+      { name: "Dữ Liệu Đã Xử Lý", href: "/products", icon: PackageSearchIcon },
+      { name: "Danh Mục Cửa Hàng", href: "/shops", icon: StoreIcon },
     ]
   },
   {
@@ -56,19 +56,19 @@ const menuGroups = [
     title: "Warehouse",
     icon: LayersIcon,
     items: [
-      { name: "Analytics", href: "/analytics", icon: BarChart3Icon },
-      { name: "Reviews", href: "/reviews", icon: MessageSquareIcon }
+      { name: "Phân Tích Bán Hàng", href: "/analytics", icon: BarChart3Icon },
+      { name: "Đánh Giá Khách Hàng", href: "/reviews", icon: MessageSquareIcon }
     ]
   },{
     key: "tools",
-    title: "Engineering Tools",
+    title: "Tools",
     icon: SettingsIcon, 
     items: [
-      { name: "SQL Playground", href: "/playground", icon: TerminalIcon },
-      { name: "Data Quality", href: "/data-quality", icon: ShieldCheckIcon },
-      { name: "System Health", href: "/system-health", icon: ActivityIcon },
-      { name: "Dictionary", href: "/dictionary", icon: BookOpenIcon },
-      { name: "System Settings", href: "/settings", icon: SettingsIcon }
+      { name: "SQL Sandbox", href: "/playground", icon: TerminalIcon },
+      { name: "Chất Lượng Dữ Liệu", href: "/data-quality", icon: ShieldCheckIcon },
+      { name: "Sức Khỏe Hệ Thống", href: "/system-health", icon: ActivityIcon },
+      { name: "Từ Điển Dữ Liệu", href: "/dictionary", icon: BookOpenIcon },
+      { name: "Cấu Hình Hệ Thống", href: "/settings", icon: SettingsIcon }
     ]
   },
 ];
@@ -88,7 +88,7 @@ export const Sidebar = () => {
   }
 
   return (
-    <div className="w-64 h-screen bg-content1 border-r border-divider flex flex-col fixed left-0 top-0 z-50">
+    <div className="w-64 h-screen bg-content1 border-r border-divider flex flex-col fixed left-0 top-0 z-50 font-sans">
       {/* Header */}
       <div className="h-16 flex items-center px-6 border-b border-divider gap-2">
         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -150,8 +150,8 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-divider">
         <div className="flex items-center justify-between bg-default-50 p-3 rounded-xl">
           <div className="flex flex-col">
-            <span className="text-xs font-semibold text-foreground">Betodemy DW</span>
-            <span className="text-[10px] text-default-500">v1.2.0 (Pro)</span>
+            <span className="text-xs font-semibold text-foreground">Cty 2 mình</span>
+            <span className="text-[10px] text-default-500">v1.1.0</span>
           </div>
           <ThemeSwitch />
         </div>

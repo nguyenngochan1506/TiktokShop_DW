@@ -7,20 +7,20 @@ import { StarIcon } from "lucide-react";
 
 export const NegativeReviewsTable = ({ reviews }: { reviews: any[] }) => {
   return (
-    <Table aria-label="Negative reviews" removeWrapper>
+    <Table aria-label="Đánh giá tiêu cực" removeWrapper className="font-sans">
       <TableHeader>
-        <TableColumn>PRODUCT</TableColumn>
-        <TableColumn>RATING</TableColumn>
-        <TableColumn>COMMENT</TableColumn>
-        <TableColumn>DATE</TableColumn>
+        <TableColumn>SẢN PHẨM</TableColumn>
+        <TableColumn>ĐIỂM SỐ</TableColumn>
+        <TableColumn>BÌNH LUẬN</TableColumn>
+        <TableColumn>NGÀY ĐÁNH GIÁ</TableColumn>
       </TableHeader>
-      <TableBody emptyContent="No negative reviews found">
+      <TableBody emptyContent="Không tìm thấy đánh giá tiêu cực nào">
         {reviews.map((review, idx) => (
           <TableRow key={idx}>
             <TableCell>
               <div className="flex flex-col">
                 <span className="text-small font-bold truncate w-[200px]" title={review.dim_sku?.dim_product?.title}>
-                    {review.dim_sku?.dim_product?.title || "Unknown Product"}
+                    {review.dim_sku?.dim_product?.title || "Sản phẩm không rõ"}
                 </span>
                 <span className="text-tiny text-default-400">{review.dim_shop?.shop_name}</span>
               </div>
@@ -38,7 +38,7 @@ export const NegativeReviewsTable = ({ reviews }: { reviews: any[] }) => {
             </TableCell>
             <TableCell>
                 <div className="max-w-[300px] text-small italic text-default-500 truncate">
-                    "{review.review_id}" (Content placeholder)
+                    "{review.review_id}" (Nội dung giữ chỗ)
                 </div>
             </TableCell>
             <TableCell>

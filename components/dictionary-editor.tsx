@@ -64,21 +64,21 @@ export default function DictionaryEditor({ initialData }: { initialData: any }) 
       
       setEditingCell(null);
     } else {
-      alert("Failed to save note");
+      alert("Lưu ghi chú thất bại");
     }
     setIsSaving(false);
   };
 
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-4">
+    <div className="flex h-[calc(100vh-100px)] gap-4 font-sans">
       
       {/* SIDEBAR: Table List */}
       <Card className="w-80 flex-none h-full flex flex-col">
         <CardHeader className="pb-0 pt-4 px-4 flex-col items-start">
             <h4 className="font-bold text-large flex items-center gap-2">
-                <BookOpenIcon size={20}/> Dictionary
+                <BookOpenIcon size={20}/> Từ Điển Dữ Liệu
             </h4>
-            <p className="text-tiny text-default-500">Select a table to document</p>
+            <p className="text-tiny text-default-500">Chọn một bảng để tài liệu hóa</p>
         </CardHeader>
         <CardBody className="p-2">
             <ScrollShadow className="h-full">
@@ -116,21 +116,21 @@ export default function DictionaryEditor({ initialData }: { initialData: any }) 
                         <Chip size="sm" variant="flat" color="secondary">{selectedSchema}</Chip>
                     </h2>
                     <p className="text-small text-default-500">
-                        {columns.length} columns available
+                        {columns.length} cột có sẵn
                     </p>
                 </div>
             </CardHeader>
             <CardBody className="p-0 overflow-hidden">
                 <Table 
-                    aria-label="Dictionary Table" 
+                    aria-label="Bảng Từ Điển" 
                     removeWrapper 
                     isHeaderSticky
                     classNames={{ base: "h-full overflow-auto", table: "min-h-[300px]" }}
                 >
                     <TableHeader>
-                        <TableColumn width={200}>COLUMN NAME</TableColumn>
-                        <TableColumn width={150}>DATA TYPE</TableColumn>
-                        <TableColumn>BUSINESS DESCRIPTION (Click to Edit)</TableColumn>
+                        <TableColumn width={200}>TÊN CỘT</TableColumn>
+                        <TableColumn width={150}>KIỂU DỮ LIỆU</TableColumn>
+                        <TableColumn>MÔ TẢ NGHIỆP VỤ (Nhấn để Chỉnh sửa)</TableColumn>
                     </TableHeader>
                     <TableBody items={columns}>
                         {(item) => (
@@ -149,7 +149,7 @@ export default function DictionaryEditor({ initialData }: { initialData: any }) 
                                                     if (e.key === 'Enter') saveEdit(item.name);
                                                     if (e.key === 'Escape') setEditingCell(null);
                                                 }}
-                                                placeholder="Enter business meaning..."
+                                                placeholder="Nhập ý nghĩa nghiệp vụ..."
                                                 className="w-full"
                                             />
                                             <Button isIconOnly size="sm" color="success" variant="flat" onPress={() => saveEdit(item.name)} isLoading={isSaving}>
@@ -162,7 +162,7 @@ export default function DictionaryEditor({ initialData }: { initialData: any }) 
                                             onClick={() => startEdit(item.name, item.description)}
                                         >
                                             <span className={item.description ? "text-default-700" : "text-default-300 italic"}>
-                                                {item.description || "No description provided."}
+                                                {item.description || "Chưa có mô tả."}
                                             </span>
                                             <Edit3Icon size={14} className="opacity-0 group-hover:opacity-50 text-primary" />
                                         </div>

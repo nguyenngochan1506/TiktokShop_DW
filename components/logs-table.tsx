@@ -29,7 +29,8 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
 
   return (
     <Table 
-      aria-label="Crawl logs table"
+      aria-label="Bảng lịch sử crawl"
+      className="font-sans"
       bottomContent={
         totalPages > 1 && (
           <div className="flex w-full justify-center">
@@ -40,14 +41,14 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
     >
       <TableHeader>
         <TableColumn>ID</TableColumn>
-        <TableColumn>SOURCE_ID</TableColumn>
-        <TableColumn>FILE NAME</TableColumn>
-        <TableColumn>FILE PATH</TableColumn>
-        <TableColumn>RECORDS</TableColumn>
-        <TableColumn>STATUS</TableColumn>
-        <TableColumn>TIME</TableColumn>
+        <TableColumn>ID NGUỒN</TableColumn>
+        <TableColumn>TÊN FILE</TableColumn>
+        <TableColumn>ĐƯỜNG DẪN FILE</TableColumn>
+        <TableColumn>SỐ BẢN GHI</TableColumn>
+        <TableColumn>TRẠNG THÁI</TableColumn>
+        <TableColumn>THỜI GIAN</TableColumn>
       </TableHeader>
-      <TableBody emptyContent="No logs found">
+      <TableBody emptyContent="Không tìm thấy logs nào">
         {logs.map((log) => (
           <TableRow key={log.id}>
             <TableCell>#{log.id}</TableCell>
@@ -57,7 +58,7 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
             <TableCell>{log.record_count ?? 0}</TableCell>
             <TableCell>
               <Chip color={log.status === "SUCCESS" ? "success" : log.status === "FAILED" ? "danger" : "warning"} size="sm" variant="flat">
-                {log.status}
+                {log.status === "SUCCESS" ? "THÀNH CÔNG" : log.status === "FAILED" ? "THẤT BẠI" : "ĐANG CHẠY"}
               </Chip>
               {log.error_message && <div className="text-tiny text-danger max-w-[200px] truncate" title={log.error_message}>{log.error_message}</div>}
             </TableCell>

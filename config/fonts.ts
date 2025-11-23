@@ -1,11 +1,15 @@
-import { Fira_Code as FontMono, Inter as FontSans } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 
-export const fontSans = FontSans({
-  subsets: ["latin"],
+export const fontSans = Inter({
+  subsets: ["latin", "vietnamese"], 
+  weight: ["300", "400", "500", "600", "700"], 
   variable: "--font-sans",
+  display: "swap",
+  adjustFontFallback: false
 });
 
-export const fontMono = FontMono({
-  subsets: ["latin"],
+export const fontMono = JetBrains_Mono({
+  subsets: ["latin", "vietnamese"],
   variable: "--font-mono",
+  display: "swap",
 });

@@ -71,7 +71,7 @@ async function runDataQualityChecks() {
         scope: "Staging",
         table: "tbl_base_products",
         rule: "Completeness: Missing Titles",
-        description: "Products with NULL title",
+        description: "Sản phẩm bị thiếu tên (title là NULL)",
         failed_count: missingTitles,
         severity: "HIGH"
     });
@@ -81,7 +81,7 @@ async function runDataQualityChecks() {
         scope: "Staging",
         table: "tbl_base_products",
         rule: "Validity: Invalid Price",
-        description: "Products with price_sale <= 0",
+        description: "Sản phẩm có giá bán (price_sale) <= 0",
         failed_count: invalidPrices,
         severity: "CRITICAL"
     });
@@ -91,7 +91,7 @@ async function runDataQualityChecks() {
         scope: "Warehouse",
         table: "fact_inventory_snapshot",
         rule: "Consistency: Negative Stock",
-        description: "Inventory records with stock < 0",
+        description: "Bản ghi tồn kho có số lượng stock < 0",
         failed_count: negativeStock,
         severity: "MEDIUM"
     });
@@ -101,7 +101,7 @@ async function runDataQualityChecks() {
         scope: "Warehouse",
         table: "fact_reviews",
         rule: "Completeness: Missing Rating",
-        description: "Reviews without numeric rating",
+        description: "Đánh giá bị thiếu điểm số (rating là NULL)",
         failed_count: missingRatings,
         severity: "LOW"
     });
@@ -111,7 +111,7 @@ async function runDataQualityChecks() {
         scope: "Staging",
         table: "tbl_base_shop_info",
         rule: "Completeness: Unknown Region",
-        description: "Shops with NULL region field",
+        description: "Cửa hàng bị thiếu thông tin khu vực (region là NULL)",
         failed_count: shopsNoRegion,
         severity: "LOW"
     });
@@ -122,7 +122,7 @@ async function runDataQualityChecks() {
         scope: "Staging",
         table: "tbl_base_products",
         rule: "Logic: Sale > Original Price",
-        description: "Sale price is higher than original price",
+        description: "Giá bán khuyến mãi (price_sale) cao hơn giá gốc (original price)",
         failed_count: priceAnomalyCount,
         severity: "HIGH"
     });
@@ -143,7 +143,7 @@ async function runDataQualityChecks() {
         scope: "System",
         table: "Pipeline",
         rule: "Timeliness: Stale Data",
-        description: `No new data ingested in the last 24h (Gap: ${hoursDiff.toFixed(1)}h)`,
+        description: `Không có dữ liệu mới được nạp trong ${staleHoursLimit} giờ qua (Độ trễ: ${hoursDiff.toFixed(1)}h)`,
         failed_count: isStale ? 1 : 0, // 1 nghĩa là Fail
         severity: "MEDIUM"
     });
@@ -176,11 +176,11 @@ export default async function DataQualityPage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold flex items-center gap-2">
-                    Data Quality Health Check
+                    Kiểm Tra Chất Lượng Dữ Liệu (Data Quality Health Check)
                 </h1>
                 <div className="flex items-center gap-2 text-default-500 text-sm bg-default-100 px-3 py-1 rounded-full">
                     <ActivityIcon size={14} />
-                    <span>Last Scan: <strong>{lastCheckTime}</strong></span>
+                    <span>Lần Quét Cuối: <strong>{lastCheckTime}</strong></span>
                 </div>
             </div>
 
@@ -190,7 +190,7 @@ export default async function DataQualityPage() {
                 {/* Health Score Card */}
                 <Card className="md:col-span-2">
                     <CardHeader className="pb-0">
-                        <h3 className="font-semibold text-lg">Overall Data Health Score</h3>
+                        <h3 className="font-semibold text-lg">Điểm Số Sức Khỏe Dữ Liệu Tổng Thể</h3>
                     </CardHeader>
                     <CardBody className="gap-4">
                         <div className="flex items-center gap-4">
@@ -199,7 +199,7 @@ export default async function DataQualityPage() {
                             </span>
                             <div className="flex-1">
                                 <Progress
-                                    aria-label="Health Score"
+                                    aria-label="Điểm Sức Khỏe"
                                     value={healthScore}
                                     color={healthScore >= 80 ? "success" : healthScore >= 50 ? "warning" : "danger"}
                                     className="max-w-full"
@@ -209,7 +209,7 @@ export default async function DataQualityPage() {
                             </div>
                         </div>
                         <p className="text-default-500 text-sm">
-                            Detected <strong>{new Intl.NumberFormat('vi-VN').format(totalIssues)}</strong> anomalies across {checks.length} validation rules.
+                            Đã phát hiện <strong>{new Intl.NumberFormat('vi-VN').format(totalIssues)}</strong> lỗi bất thường trên {checks.length} quy tắc kiểm tra.
                         </p>
                     </CardBody>
                 </Card>
@@ -220,20 +220,20 @@ export default async function DataQualityPage() {
                         <div className="flex items-center justify-between p-2 bg-success-50 rounded-lg">
                             <div className="flex items-center gap-2">
                                 <CheckCircleIcon size={18} className="text-success" />
-                                <span className="text-sm font-medium">Passed</span>
+                                <span className="text-sm font-medium">Đạt</span>
                             </div>
                             <span className="font-bold text-success text-lg">{checks.filter(c => c.failed_count === 0).length}</span>
                         </div>
                         <div className="flex items-center justify-between p-2 bg-danger-50 rounded-lg">
                             <div className="flex items-center gap-2">
                                 <XCircleIcon size={18} className="text-danger" />
-                                <span className="text-sm font-medium">Failed</span>
+                                <span className="text-sm font-medium">Lỗi</span>
                             </div>
                             <span className="font-bold text-danger text-lg">{checks.filter(c => c.failed_count > 0).length}</span>
                         </div>
                         <div className="flex items-center gap-2 text-default-400 text-xs px-2">
                             <ClockIcon size={12} />
-                            <span>Auto-refresh every 24h</span>
+                            <span>Tự động làm mới sau mỗi 24h</span>
                         </div>
                     </CardBody>
                 </Card>
@@ -242,7 +242,7 @@ export default async function DataQualityPage() {
             {/* Rules Detail Table (Client Component) */}
             <Card>
                 <CardHeader>
-                    <h3 className="font-semibold text-lg">Detailed Validation Report</h3>
+                    <h3 className="font-semibold text-lg">Báo Cáo Kiểm Tra Chi Tiết</h3>
                 </CardHeader>
                 <CardBody className="p-0">
                     <DataQualityTable checks={checks} />

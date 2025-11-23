@@ -41,8 +41,8 @@ export default async function ShopsPage({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Shop Directory</h1>
-        <SearchInput placeholder="Search shop name..." />
+        <h1 className="text-2xl font-bold">Danh Mục Cửa Hàng</h1>
+        <SearchInput placeholder="Tìm kiếm tên cửa hàng..." />
       </div>
       <ShopsTable shops={serializedShops} totalPages={totalPages} />
     </div>

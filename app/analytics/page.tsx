@@ -37,7 +37,7 @@ async function getWarehouseData(from?: string, to?: string) {
   const targetDateKey = await getTargetDateKey(from, to);
 
   if (!targetDateKey) {
-    return { topProducts: [], topShops: [], displayDate: "No Data Found", hasData: false };
+    return { topProducts: [], topShops: [], displayDate: "Không tìm thấy dữ liệu", hasData: false };
   }
 
   // Lấy thông tin hiển thị ngày
@@ -74,11 +74,11 @@ async function getWarehouseData(from?: string, to?: string) {
 
   // Format flat data cho Excel export
   const topProductsExport = topProductsRaw.map(item => ({
-    "Product Name": item.title,
-    "Product ID": item.product_id,
-    "Shop Name": item.shop_name,
-    "Sold Count": Number(item.sold_count), // BigInt safe convert
-    "Price": Number(item.price_sale)
+    "Tên Sản Phẩm": item.title,
+    "ID Sản Phẩm": item.product_id,
+    "Tên Cửa Hàng": item.shop_name,
+    "Số Lượng Đã Bán": Number(item.sold_count), // BigInt safe convert
+    "Giá Bán": Number(item.price_sale)
   }));
 
   // 3. Top Shops (Snapshot tại ngày target)
@@ -105,10 +105,10 @@ async function getWarehouseData(from?: string, to?: string) {
   `;
 
   const topShopsExport = topShopsRaw.map(item => ({
-    "Shop Name": item.shop_name,
-    "Seller ID": item.seller_id,
-    "Total Sold": Number(item.total_sold),
-    "Est. Revenue": Number(item.revenue)
+    "Tên Cửa Hàng": item.shop_name,
+    "ID Người Bán": item.seller_id,
+    "Tổng Số Lượng Đã Bán": Number(item.total_sold),
+    "Doanh Thu Ước Tính": Number(item.revenue)
   }));
 
   return {
@@ -134,9 +134,9 @@ export default async function AnalyticsPage({
       {/* Header & Toolbar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Warehouse Analytics</h1>
+          <h1 className="text-2xl font-bold">Phân Tích Data Warehouse</h1>
           <p className="text-small text-default-500">
-            Snapshot Data Analysis (Showing data for: <strong>{data.displayDate}</strong>)
+            Phân tích dữ liệu Snapshot (Hiển thị dữ liệu cho ngày: <strong>{data.displayDate}</strong>)
           </p>
         </div>
         
@@ -153,8 +153,8 @@ export default async function AnalyticsPage({
       {!data.hasData ? (
         <div className="flex flex-col items-center justify-center h-[300px] border border-dashed border-default-300 rounded-xl bg-default-50">
             <FilterXIcon size={48} className="text-default-300 mb-4"/>
-            <h3 className="text-lg font-semibold text-default-500">No Snapshot Data Found</h3>
-            <p className="text-sm text-default-400">Try selecting a different date range.</p>
+            <h3 className="text-lg font-semibold text-default-500">Không tìm thấy Dữ liệu Snapshot</h3>
+            <p className="text-sm text-default-400">Hãy thử chọn một khoảng ngày khác.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -165,8 +165,8 @@ export default async function AnalyticsPage({
               <div className="flex gap-3">
                 <TrendingUpIcon className="text-primary" />
                 <div className="flex flex-col">
-                  <p className="text-md font-bold">Top Selling Products</p>
-                  <p className="text-small text-default-500">Cumulative sold count</p>
+                  <p className="text-md font-bold">Sản Phẩm Bán Chạy Nhất</p>
+                  <p className="text-small text-default-500">Tổng số lượng đã bán tích lũy</p>
                 </div>
               </div>
               <DownloadBtn 
@@ -185,8 +185,8 @@ export default async function AnalyticsPage({
               <div className="flex gap-3">
                 <StoreIcon className="text-success" />
                 <div className="flex flex-col">
-                  <p className="text-md font-bold">Top Revenue Shops</p>
-                  <p className="text-small text-default-500">Revenue based on sold count</p>
+                  <p className="text-md font-bold">Cửa Hàng Doanh Thu Cao Nhất</p>
+                  <p className="text-small text-default-500">Doanh thu dựa trên số lượng đã bán</p>
                 </div>
               </div>
               <DownloadBtn 

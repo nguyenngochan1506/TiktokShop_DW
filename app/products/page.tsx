@@ -40,8 +40,8 @@ export default async function ProductsPage({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Cleaned Products (Staging)</h1>
-        <SearchInput placeholder="Search by name or ID..." />
+        <h1 className="text-2xl font-bold">Sản Phẩm Đã Làm Sạch (Staging)</h1>
+        <SearchInput placeholder="Tìm kiếm theo tên hoặc ID..." />
       </div>
       <BaseProductsTable products={serializedProducts} totalPages={totalPages} />
     </div>

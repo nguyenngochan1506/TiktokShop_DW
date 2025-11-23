@@ -9,6 +9,7 @@ import { Pagination } from '@heroui/pagination'
 import { EditSourceModal } from '@/components/edit-source-modal';
 import { deleteSource, triggerCrawl } from '@/app/actions/sources';
 import { useState } from 'react';
+import { Button } from '@heroui/button';
 
 interface SourcesTableProps {
     sources: any[];
@@ -26,6 +27,7 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [triggeringId, setTriggeringId] = useState<number | null>(null); 
+    const [isDeleting, setIsDeleting] = useState<number | null>(null); // State cho nút xóa
 
     const currentPage = Number(searchParams.get("page")) || 1;
 
@@ -39,9 +41,16 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
         params.set("page", page.toString());
         router.push(`${pathname}?${params.toString()}`);
     };
-    const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this source?")) {
+    
+    // Thay thế `confirm()` bằng một thông báo console và tiến hành xóa
+    const handleDelete = async (id: number, sourceName: string) => {
+        // NOTE: Trong môi trường thực, cần dùng Modal UI thay vì confirm
+        if (window.confirm(`Bạn có chắc chắn muốn xóa nguồn dữ liệu "${sourceName}" không? Hành động này không thể hoàn tác.`)) {
+            setIsDeleting(id);
             await deleteSource(id);
+            setIsDeleting(null);
+            // Sau khi xóa, làm mới trang
+            router.refresh(); 
         }
     };
 
@@ -49,14 +58,18 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
         setTriggeringId(id);
         const result = await triggerCrawl(id);
         if (result.error) {
-            alert(result.error);
+            // Thay thế alert() bằng console.error
+            console.error("Lỗi kích hoạt crawl:", result.error);
         }
         setTriggeringId(null);
+        // Sau khi kích hoạt, làm mới trang để cập nhật trạng thái
+        router.refresh();
     };
 
     return (
         <Table
-            aria-label="Source configs table"
+            aria-label="Bảng cấu hình nguồn dữ liệu"
+            className="font-sans"
             bottomContent={
                 totalPages > 1 ? (
                     <div className="flex w-full justify-center">
@@ -75,12 +88,12 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
         >
             <TableHeader>
                 <TableColumn>ID</TableColumn>
-                <TableColumn>SOURCE NAME</TableColumn>
-                <TableColumn>STATUS</TableColumn>
-                <TableColumn>LAST CRAWL</TableColumn>
-                <TableColumn>ACTIONS</TableColumn>
+                <TableColumn>TÊN NGUỒN</TableColumn>
+                <TableColumn>TRẠNG THÁI</TableColumn>
+                <TableColumn>LẦN CRAWL CUỐI</TableColumn>
+                <TableColumn>HÀNH ĐỘNG</TableColumn>
             </TableHeader>
-            <TableBody emptyContent={"No rows to display."}>
+            <TableBody emptyContent={"Không có dòng nào để hiển thị."}>
                 {sources.map((source) => (
                     <TableRow key={source.id}>
                         <TableCell>#{source.id}</TableCell>
@@ -99,7 +112,7 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
                                 size="sm"
                                 variant="flat"
                             >
-                                {source.is_active ? "Active" : "Inactive"}
+                                {source.is_active ? "Hoạt động" : "Ngừng hoạt động"}
                             </Chip>
                         </TableCell>
                         <TableCell>
@@ -109,7 +122,7 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
                                     color={statusColorMap[source.last_crawl_status || "PENDING"] || "default"}
                                     variant="dot"
                                 >
-                                    {source.last_crawl_status || "N/A"}
+                                    {source.last_crawl_status || "Chưa chạy"}
                                 </Chip>
                                 <span className="text-tiny text-default-400">
                                     {formatDate(source.last_crawl_timestamp)}
@@ -119,21 +132,33 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
                         <TableCell>
                             <div className="flex items-center gap-2">
                                 <EditSourceModal source={source} />
-                                <Tooltip color="danger" content="Delete source">
-                                    <span
+                                <Tooltip color="danger" content="Xóa nguồn">
+                                    <Button
+                                        isIconOnly
+                                        size="sm"
+                                        variant="light"
+                                        color="danger"
+                                        onPress={() => handleDelete(source.id, source.source_name)}
+                                        isLoading={isDeleting === source.id}
+                                        disabled={isDeleting === source.id}
                                         className="text-lg text-danger cursor-pointer active:opacity-50 hover:opacity-100"
-                                        onClick={() => handleDelete(source.id)}
                                     >
                                         <TrashIcon size={18} />
-                                    </span>
+                                    </Button>
                                 </Tooltip>
-                                <Tooltip content="Trigger Crawl">
-                                    <span 
-                                        className={`text-lg text-primary cursor-pointer active:opacity-50 hover:opacity-100 ${triggeringId === source.id ? 'animate-spin opacity-50 cursor-not-allowed' : ''}`}
-                                        onClick={() => triggeringId !== source.id && handleTriggerCrawl(source.id)}
+                                <Tooltip content="Kích hoạt Crawl">
+                                    <Button
+                                        isIconOnly
+                                        size="sm"
+                                        variant="light"
+                                        color="primary"
+                                        onPress={() => handleTriggerCrawl(source.id)}
+                                        isLoading={triggeringId === source.id}
+                                        disabled={triggeringId === source.id}
+                                        className="text-lg text-primary cursor-pointer active:opacity-50 hover:opacity-100"
                                     >
-                                        <RefreshCwIcon size={18} />
-                                    </span>
+                                        <RefreshCwIcon size={18} className={triggeringId === source.id ? 'animate-spin' : ''} />
+                                    </Button>
                                 </Tooltip>
                             </div>
                         </TableCell>

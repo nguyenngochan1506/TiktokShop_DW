@@ -36,9 +36,9 @@ export default async function RawDataPage({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Raw Product Data</h1>
+        <h1 className="text-2xl font-bold">Dữ Liệu Sản Phẩm Thô (Raw Data)</h1>
         <div className="text-small text-default-500">
-            Total: {new Intl.NumberFormat('vi-VN').format(totalCount)} records
+            Tổng cộng: {new Intl.NumberFormat('vi-VN').format(totalCount)} bản ghi
         </div>
       </div>
       <RawDataTable data={serializedProducts} totalPages={totalPages} />
