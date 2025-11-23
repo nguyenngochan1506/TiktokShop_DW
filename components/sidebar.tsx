@@ -62,8 +62,9 @@ const menuGroups = [
     title: "Engineering Tools",
     icon: SettingsIcon, 
     items: [
-      { name: "SQL Playground", href: "/playground", icon: TerminalIcon }, // Import TerminalIcon từ lucide-react
-      { name: "Data Quality", href: "/data-quality", icon: ShieldCheckIcon }, // Import ShieldCheckIcon
+      { name: "SQL Playground", href: "/playground", icon: TerminalIcon },
+      { name: "Data Quality", href: "/data-quality", icon: ShieldCheckIcon },
+      { name: "System Health", href: "/system-health", icon: ActivityIcon }
     ]
   },
 ];
