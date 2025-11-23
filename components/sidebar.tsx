@@ -16,7 +16,8 @@ import {
   ActivityIcon,
   MessageSquareIcon,
   TerminalIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  BookOpenIcon
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
 
@@ -64,7 +65,8 @@ const menuGroups = [
     items: [
       { name: "SQL Playground", href: "/playground", icon: TerminalIcon },
       { name: "Data Quality", href: "/data-quality", icon: ShieldCheckIcon },
-      { name: "System Health", href: "/system-health", icon: ActivityIcon }
+      { name: "System Health", href: "/system-health", icon: ActivityIcon },
+      { name: "Dictionary", href: "/dictionary", icon: BookOpenIcon }
     ]
   },
 ];

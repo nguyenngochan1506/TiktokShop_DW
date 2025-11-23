@@ -266,3 +266,15 @@ model fact_sales_snapshot {
   @@index([shop_key], map: "idx_fact_sales_shop_key")
   @@schema("warehouse")
 }
+
+model data_dictionary_notes {
+  id          Int      @id @default(autoincrement())
+  schema_name String   @db.VarChar(50)
+  table_name  String   @db.VarChar(100)
+  column_name String   @db.VarChar(100)
+  description String?
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([schema_name, table_name, column_name], map: "uq_dictionary_col")
+  @@schema("controller")
+}
