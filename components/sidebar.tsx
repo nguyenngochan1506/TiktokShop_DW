@@ -7,7 +7,8 @@ import {
     DatabaseIcon,
     FileTextIcon,
     SettingsIcon,
-    LayersIcon
+    LayersIcon,
+    BarChart3Icon
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
 
@@ -17,6 +18,7 @@ const menuItems = [
     { name: "Crawl Logs", href: "/logs", icon: FileTextIcon },
     { name: "Raw Products", href: "/raw-data", icon: DatabaseIcon },
     { name: "Base Products", href: "/products", icon: LayersIcon },
+    { name: "Analytics", href: "/analytics", icon: BarChart3Icon }
 ];
 
 export const Sidebar = () => {
