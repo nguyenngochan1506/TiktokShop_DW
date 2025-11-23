@@ -95,6 +95,7 @@ export async function triggerCrawl(sourceId: number) {
       where: { id: sourceId },
       data: {
         last_crawl_status: "PENDING",
+        is_active: false,
         updated_at: new Date(), 
       },
     });

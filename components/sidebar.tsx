@@ -18,7 +18,8 @@ import {
   TerminalIcon,
   ShieldCheckIcon,
   BookOpenIcon,
-  PanelLeftClose
+  PanelLeftClose,
+  LogOutIcon
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
 import { CommandPalette } from "./command-palette";
@@ -26,6 +27,8 @@ import { useSidebar } from "./sidebar-context";
 import clsx from "clsx";
 import { Tooltip } from "@heroui/tooltip";
 import { Button } from "@heroui/button";
+import { User } from "@heroui/user";
+import { handleLogout } from "@/app/actions/auth";
 
 // Định nghĩa cấu trúc Menu
 const menuGroups = [
@@ -78,7 +81,15 @@ const menuGroups = [
   },
 ];
 
-export const Sidebar = () => {
+interface SidebarProps {
+    user: {
+        name?: string | null;
+        email?: string | null;
+    }
+}
+
+
+export const Sidebar = ({ user }: SidebarProps) => {
   const pathname = usePathname();
   const { isOpen, toggleSidebar } = useSidebar();
 
@@ -171,13 +182,38 @@ export const Sidebar = () => {
       </nav>
 
       {/* Footer (Theme Switch) */}
-      <div className="p-4 border-t border-divider">
+      <div className="p-4 border-t border-divider flex flex-col gap-4">
+        {/* Theme Switch */}
         <div className="flex items-center justify-between bg-default-50 p-3 rounded-xl">
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold text-foreground">Cty 2 mình</span>
-            <span className="text-[10px] text-default-500">v1.1.0</span>
-          </div>
-          <ThemeSwitch />
+            <span className="text-xs text-default-500">Giao diện</span>
+            <ThemeSwitch />
+        </div>
+
+        {/* User Profile & Logout */}
+        <div className="flex items-center justify-between gap-2">
+            <User   
+                name={user?.name || "Admin"}
+                description={user?.email}
+                avatarProps={{
+                    src: "https://i.pravatar.cc/150?u=a042581f4e29026024d",
+                    size: "sm"
+                }}
+                classNames={{
+                    name: "text-sm font-semibold truncate w-[120px]",
+                    description: "text-[10px] truncate w-[120px]"
+                }}
+            />
+            <Tooltip content="Đăng xuất">
+                <Button 
+                    isIconOnly 
+                    size="sm" 
+                    color="danger" 
+                    variant="light" 
+                    onPress={() => handleLogout()}
+                >
+                    <LogOutIcon size={18} />
+                </Button>
+            </Tooltip>
         </div>
       </div>
     </aside>

@@ -3,20 +3,24 @@ import { Metadata } from "next";
 import { Providers } from "./providers";
 import { fontSans, fontMono } from "@/config/fonts";
 import { Sidebar } from "@/components/sidebar";
-import { SidebarProvider } from "@/components/sidebar-context"; // Import 1
-import { MainLayout } from "@/components/main-layout"; // Import 2
+import { SidebarProvider } from "@/components/sidebar-context";
+import { MainLayout } from "@/components/main-layout";
 import clsx from "clsx";
+import { auth } from "@/auth"; // Import auth
 
 export const metadata: Metadata = {
   title: "Data Warehouse Admin",
   description: "Manage crawl sources and view data",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Lấy session server-side
+  const session = await auth();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -27,18 +31,19 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          {/* Bọc toàn bộ app trong SidebarProvider */}
-          <SidebarProvider>
-            <div className="flex min-h-screen">
-              
-              <Sidebar />
-              
-              <MainLayout>
-                {children}
-              </MainLayout>
-              
-            </div>
-          </SidebarProvider>
+          {!session?.user ? (
+             <main className="h-screen w-full">{children}</main>
+          ) : (
+            <SidebarProvider>
+              <div className="flex min-h-screen">
+                <Sidebar user={session.user} />
+                
+                <MainLayout>
+                  {children}
+                </MainLayout>
+              </div>
+            </SidebarProvider>
+          )}
         </Providers>
       </body>
     </html>

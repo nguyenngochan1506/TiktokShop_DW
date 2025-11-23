@@ -289,3 +289,14 @@ model system_settings {
 
   @@schema("controller")
 }
+
+model system_users {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique @db.VarChar(255)
+  password   String   @db.VarChar(255) // Lưu hash password
+  name       String?  @db.VarChar(100)
+  role       String   @default("ADMIN") @db.VarChar(20)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@schema("controller")
+}

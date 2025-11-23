@@ -27,7 +27,7 @@ export default async function SourcesPage({
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Cấu Hình Nguồn Dữ Liệu</h1>
+                <h1 className="text-2xl font-bold">Source Configurations</h1>
 
                 <CreateSourceModal />
 
