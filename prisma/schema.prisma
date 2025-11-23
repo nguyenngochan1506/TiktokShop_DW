@@ -1,0 +1,269 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../app/generated/prisma"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["controller", "staging", "warehouse"]
+}
+
+model crawled_files_log {
+  id               Int           @id @default(autoincrement())
+  source_config_id Int
+  file_name        String        @db.VarChar(255)
+  file_path        String?       @db.VarChar(1024)
+  record_count     Int?
+  status           String        @default("PENDING") @db.VarChar(50)
+  error_message    String?
+  created_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  processed_at     DateTime?     @db.Timestamptz(6)
+  source_config    source_config @relation(fields: [source_config_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("controller")
+}
+
+model source_config {
+  id                   Int                 @id @default(autoincrement())
+  source_name          String              @db.VarChar(255)
+  base_url             String              @unique
+  is_active            Boolean             @default(true)
+  last_crawl_status    String?             @db.VarChar(50)
+  last_crawl_timestamp DateTime?           @db.Timestamptz(6)
+  created_at           DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?           @default(now()) @db.Timestamptz(6)
+  crawled_files_log    crawled_files_log[]
+
+  @@schema("controller")
+}
+
+model tbl_base_product_reviews {
+  id                BigInt    @id @default(autoincrement())
+  review_id         String    @unique(map: "uq_base_reviews_review_id") @db.VarChar(50)
+  product_id        String?   @db.VarChar(50)
+  sku_id            String?   @db.VarChar(50)
+  sku_specification String?   @db.VarChar(255)
+  rating            Int?
+  display_text      String?
+  images            Json?
+  review_timestamp  DateTime? @db.Timestamptz(6)
+  media             Json?
+  load_timestamp    DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([product_id], map: "idx_base_reviews_product_id")
+  @@index([sku_id], map: "idx_base_reviews_sku_id")
+  @@schema("staging")
+}
+
+model tbl_base_product_skus {
+  id             BigInt    @id @default(autoincrement())
+  product_id     String?   @db.VarChar(50)
+  sku_id         String    @db.VarChar(50)
+  sku_sale_props Json?
+  stock          Int?
+  price_real     Decimal?  @db.Decimal(18, 2)
+  price_original Decimal?  @db.Decimal(18, 2)
+  valid_to       DateTime? @db.Timestamptz(6)
+  load_timestamp DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([sku_id], map: "idx_base_skus_sku_id")
+  @@schema("staging")
+}
+
+model tbl_base_products {
+  id             BigInt    @id @default(autoincrement())
+  product_id     String    @db.VarChar(50)
+  title          String?   @db.VarChar(500)
+  description    String?
+  specifications Json?
+  price_original Decimal?  @db.Decimal(18, 2)
+  price_sale     Decimal?  @db.Decimal(18, 2)
+  currency       String?   @db.VarChar(10)
+  sold_count     Int?
+  images         Json?
+  avg_rating     Float?
+  review_count   Int?
+  default_sku_id String?   @db.VarChar(50)
+  categories     Json?
+  seller_id      String?   @db.VarChar(50)
+  valid_to       DateTime? @db.Timestamptz(6)
+  load_timestamp DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([product_id], map: "idx_base_products_product_id")
+  @@schema("staging")
+}
+
+model tbl_base_shop_info {
+  id                    BigInt    @id @default(autoincrement())
+  seller_id             String    @unique(map: "uq_base_shop_seller_id") @db.VarChar(50)
+  shop_name             String?   @db.VarChar(255)
+  description           String?
+  sold_count            BigInt?
+  on_sell_product_count Int?
+  review_count          BigInt?
+  followers_count       BigInt?
+  video_count           Int?
+  shop_logo             Json?
+  shop_rating           Float?
+  shop_link             String?   @db.VarChar(1024)
+  region                String?   @db.VarChar(50)
+  worst_rating          Int?
+  best_rating           Int?
+  valid_to              DateTime? @db.Timestamptz(6)
+  load_timestamp        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([seller_id], map: "idx_base_shop_info_id")
+  @@schema("staging")
+}
+
+model tbl_products_raw {
+  id               BigInt    @id @default(autoincrement())
+  product_id       String    @db.VarChar(50)
+  raw_data         Json?
+  source_file_name String?   @db.VarChar(255)
+  load_timestamp   DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([product_id], map: "idx_products_raw_product_id")
+  @@schema("staging")
+}
+
+model agg_product_daily_summary {
+  summary_key           Int          @id @default(autoincrement())
+  date_key              Int?
+  product_key           Int?
+  shop_key              Int?
+  total_reviews_today   Int?
+  avg_rating_today      Decimal?     @db.Decimal(3, 2)
+  total_sold_cumulative Int?
+  current_stock         Int?
+  current_price         Decimal?     @db.Decimal(18, 2)
+  dim_date              dim_date?    @relation(fields: [date_key], references: [date_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_product           dim_product? @relation(fields: [product_key], references: [product_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_shop              dim_shop?    @relation(fields: [shop_key], references: [shop_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_agg_daily_date")
+  @@index([product_key], map: "idx_agg_daily_product")
+  @@schema("warehouse")
+}
+
+model dim_date {
+  date_key                  Int                         @id
+  full_date                 DateTime                    @db.Date
+  day_of_week               Int                         @db.SmallInt
+  day_name                  String                      @db.VarChar(20)
+  day_of_month              Int                         @db.SmallInt
+  month                     Int                         @db.SmallInt
+  month_name                String                      @db.VarChar(20)
+  quarter                   Int                         @db.SmallInt
+  year                      Int                         @db.SmallInt
+  is_weekend                Boolean
+  agg_product_daily_summary agg_product_daily_summary[]
+
+  @@schema("warehouse")
+}
+
+model dim_product {
+  product_key               Int                         @id @default(autoincrement())
+  product_id                String                      @db.VarChar(50)
+  title                     String?                     @db.VarChar(500)
+  description               String?
+  default_sku_id            String?                     @db.VarChar(50)
+  categories                Json?
+  seller_id                 String?                     @db.VarChar(50)
+  valid_from                DateTime?                   @default(now()) @db.Timestamp(6)
+  valid_to                  DateTime?                   @default(dbgenerated("'9999-12-31 00:00:00'::timestamp without time zone")) @db.Timestamp(6)
+  is_current                Boolean?                    @default(true)
+  agg_product_daily_summary agg_product_daily_summary[]
+  dim_sku                   dim_sku[]
+  fact_sales_snapshot       fact_sales_snapshot[]
+
+  @@index([seller_id], map: "idx_dim_product_seller_id")
+  @@schema("warehouse")
+}
+
+model dim_shop {
+  shop_key                  Int                         @id @default(autoincrement())
+  seller_id                 String                      @db.VarChar(50)
+  shop_name                 String?                     @db.VarChar(255)
+  region                    String?                     @db.VarChar(50)
+  shop_rating               Float?
+  followers_count           BigInt?
+  on_sell_product_count     Int?
+  valid_from                DateTime?                   @default(now()) @db.Timestamp(6)
+  valid_to                  DateTime?                   @default(dbgenerated("'9999-12-31 00:00:00'::timestamp without time zone")) @db.Timestamp(6)
+  is_current                Boolean?                    @default(true)
+  agg_product_daily_summary agg_product_daily_summary[]
+  fact_reviews              fact_reviews[]
+  fact_sales_snapshot       fact_sales_snapshot[]
+
+  @@schema("warehouse")
+}
+
+model dim_sku {
+  sku_key                 Int                       @id @default(autoincrement())
+  sku_id                  String                    @db.VarChar(50)
+  product_key             Int
+  sku_sale_props          Json?
+  price_real              Decimal?                  @db.Decimal(18, 2)
+  price_original          Decimal?                  @db.Decimal(18, 2)
+  sku_specification       String?                   @db.VarChar(255)
+  valid_from              DateTime?                 @default(now()) @db.Timestamp(6)
+  valid_to                DateTime?                 @default(dbgenerated("'9999-12-31 00:00:00'::timestamp without time zone")) @db.Timestamp(6)
+  is_current              Boolean?                  @default(true)
+  dim_product             dim_product               @relation(fields: [product_key], references: [product_key], onDelete: NoAction, onUpdate: NoAction)
+  fact_inventory_snapshot fact_inventory_snapshot[]
+  fact_reviews            fact_reviews[]
+
+  @@index([product_key], map: "idx_dim_sku_product_key")
+  @@schema("warehouse")
+}
+
+model fact_inventory_snapshot {
+  inventory_snapshot_key Int      @id @default(autoincrement())
+  sku_key                Int
+  date_key               Int
+  stock                  Int?
+  price_real             Decimal? @db.Decimal(18, 2)
+  dim_sku                dim_sku  @relation(fields: [sku_key], references: [sku_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_fact_inventory_date_key")
+  @@index([sku_key], map: "idx_fact_inventory_sku_key")
+  @@schema("warehouse")
+}
+
+model fact_reviews {
+  review_fact_key  Int       @id @default(autoincrement())
+  sku_key          Int
+  date_key         Int
+  shop_key         Int
+  review_id        String    @unique(map: "uq_fact_reviews_review_id") @db.VarChar(50)
+  rating           Int?
+  review_timestamp DateTime? @db.Timestamptz(6)
+  dim_shop         dim_shop  @relation(fields: [shop_key], references: [shop_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_sku          dim_sku   @relation(fields: [sku_key], references: [sku_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_fact_reviews_date_key")
+  @@index([shop_key], map: "idx_fact_reviews_shop_key")
+  @@index([sku_key], map: "idx_fact_reviews_sku_key")
+  @@schema("warehouse")
+}
+
+model fact_sales_snapshot {
+  sales_snapshot_key Int         @id @default(autoincrement())
+  product_key        Int
+  date_key           Int
+  shop_key           Int
+  sold_count         Int?
+  avg_rating         Float?
+  review_count       Int?
+  price_sale         Decimal?    @db.Decimal(18, 2)
+  dim_product        dim_product @relation(fields: [product_key], references: [product_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_shop           dim_shop    @relation(fields: [shop_key], references: [shop_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_fact_sales_date_key")
+  @@index([product_key], map: "idx_fact_sales_product_key")
+  @@index([shop_key], map: "idx_fact_sales_shop_key")
+  @@schema("warehouse")
+}
