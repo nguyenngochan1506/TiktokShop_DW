@@ -20,6 +20,7 @@ import {
   BookOpenIcon
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
+import { CommandPalette } from "./command-palette";
 
 // Định nghĩa cấu trúc Menu
 const menuGroups = [
@@ -94,6 +95,9 @@ export const Sidebar = () => {
             <span className="text-white font-bold text-lg">D</span>
         </div>
         <span className="text-xl font-bold text-foreground">DW Admin</span>
+      </div>
+         <div className="px-4 py-4">
+        <CommandPalette />
       </div>
 
       {/* Navigation (Scrollable) */}
