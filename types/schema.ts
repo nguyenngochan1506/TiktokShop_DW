@@ -11,6 +11,7 @@ export interface CrawlLog {
   id: number;
   source_config_id: number;
   file_name: string;
+  file_path: string;
   record_count: number;
   status: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED";
   error_message?: string;

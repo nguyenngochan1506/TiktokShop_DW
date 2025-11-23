@@ -19,7 +19,7 @@ export default async function LogsPage({
       orderBy: { id: 'desc' },
       include: { 
         source_config: {
-          select: { source_name: true }
+          select: { id: true }
         }
       }
     }),

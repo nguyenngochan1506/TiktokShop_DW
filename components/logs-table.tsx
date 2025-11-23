@@ -7,11 +7,12 @@ import { Pagination } from "@heroui/pagination";
 interface Log {
   id: number;
   file_name: string;
+  file_path: string;
   record_count: number | null;
   status: string;
   error_message: string | null;
   created_at: Date | null;
-  source_config: { source_name: string };
+  source_config: { id: string };
 }
 
 export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: number }) => {
@@ -39,8 +40,9 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
     >
       <TableHeader>
         <TableColumn>ID</TableColumn>
-        <TableColumn>SOURCE</TableColumn>
+        <TableColumn>SOURCE_ID</TableColumn>
         <TableColumn>FILE NAME</TableColumn>
+        <TableColumn>FILE PATH</TableColumn>
         <TableColumn>RECORDS</TableColumn>
         <TableColumn>STATUS</TableColumn>
         <TableColumn>TIME</TableColumn>
@@ -49,8 +51,9 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
         {logs.map((log) => (
           <TableRow key={log.id}>
             <TableCell>#{log.id}</TableCell>
-            <TableCell className="font-bold text-small">{log.source_config?.source_name}</TableCell>
+            <TableCell className="font-bold text-small">#{log.source_config?.id}</TableCell>
             <TableCell>{log.file_name}</TableCell>
+            <TableCell>{log.file_path}</TableCell>
             <TableCell>{log.record_count ?? 0}</TableCell>
             <TableCell>
               <Chip color={log.status === "SUCCESS" ? "success" : log.status === "FAILED" ? "danger" : "warning"} size="sm" variant="flat">
