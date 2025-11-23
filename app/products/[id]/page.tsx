@@ -46,7 +46,9 @@ async function getProductDetail(productId: string) {
       title: true,
       valid_from: true,
       valid_to: true,
-      is_current: true
+      is_current: true,
+      description: true,
+      categories: true
     }
   });
 

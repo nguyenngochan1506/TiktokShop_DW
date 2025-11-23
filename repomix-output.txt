@@ -48,23 +48,45 @@ Directory Structure
 app/
   actions/
     sources.ts
+  analytics/
+    page.tsx
   logs/
     page.tsx
   products/
+    [id]/
+      page.tsx
+    page.tsx
+  raw-data/
+    page.tsx
+  reviews/
+    page.tsx
+  shops/
     page.tsx
   sources/
     page.tsx
   error.tsx
   layout.tsx
+  loading.tsx
   page.tsx
   providers.tsx
 components/
+  analytics-tables.tsx
+  base-products-table.tsx
   counter.tsx
   create-source-modal.tsx
+  dashboard-chart.tsx
   edit-source-modal.tsx
   icons.tsx
   logs-table.tsx
+  negative-reviews-table.tsx
   primitives.ts
+  product-history-chart.tsx
+  product-version-history-table.tsx
+  rating-pie-chart.tsx
+  raw-data-table.tsx
+  recent-logs-table.tsx
+  search-input.tsx
+  shops-table.tsx
   sidebar.tsx
   sources-table.tsx
   theme-switch.tsx
@@ -73,6 +95,7 @@ config/
   site.ts
 lib/
   prisma.ts
+  utils.ts
 prisma/
   schema.prisma
 public/
@@ -101,119 +124,488 @@ Files
 ================================================================
 
 ================
-File: app/actions/sources.ts
+File: app/analytics/page.tsx
 ================
-"use server";
-
+import { Card, CardBody, CardHeader } from "@heroui/card";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { serializeData } from "@/lib/utils";
+import { TrendingUpIcon, StoreIcon, CalendarIcon } from "lucide-react";
+import { TopProductsTable, TopShopsTable } from "@/components/analytics-tables";
 
-export async function createSource(formData: FormData) {
-  const source_name = formData.get("source_name") as string;
-  const base_url = formData.get("base_url") as string;
-  const is_active = formData.get("is_active") !== null; 
+async function getWarehouseData() {
+  // 1. Lấy ngày mới nhất (Giữ nguyên)
+  const maxDateResult = await prisma.fact_sales_snapshot.aggregate({
+    _max: { date_key: true }
+  });
+  const latestDateKey = maxDateResult._max.date_key;
 
-  if (!source_name || !base_url) {
-    return { error: "Name and URL are required" };
+  if (!latestDateKey) {
+    return { topProducts: [], topShops: [], latestDate: "N/A" };
   }
 
-  try {
-    await prisma.source_config.create({
-      data: {
-        source_name,
-        base_url,
-        is_active,
-        last_crawl_status: "PENDING",
-      },
-    });
+  const dateInfo = await prisma.dim_date.findUnique({
+    where: { date_key: latestDateKey }
+  });
+  const dateDisplay = dateInfo ? new Date(dateInfo.full_date).toLocaleDateString('vi-VN') : latestDateKey.toString();
 
-    revalidatePath("/sources");
-    
-    return { success: true };
-  } catch (error) {
-    console.error("Create source error:", error);
-    return { error: "Failed to create source. URL might be duplicate." };
-  }
+  // 2. Top Products (Code cũ đã fix GROUP BY - Giữ nguyên)
+  const topProductsRaw: any[] = await prisma.$queryRaw`
+    SELECT 
+      p.title, p.product_id,
+      MAX(s.shop_name) as shop_name,
+      MAX(f.sold_count) as sold_count,
+      MAX(f.price_sale) as price_sale
+    FROM "warehouse"."fact_sales_snapshot" f
+    JOIN "warehouse"."dim_product" p ON f.product_key = p.product_key
+    JOIN "warehouse"."dim_shop" s ON f.shop_key = s.shop_key
+    WHERE f.date_key = ${latestDateKey}
+    GROUP BY p.product_key, p.title, p.product_id
+    ORDER BY sold_count DESC
+    LIMIT 5
+  `;
+
+  const topProductsFormatted = topProductsRaw.map(item => ({
+    dim_product: { title: item.title, product_id: item.product_id },
+    dim_shop: { shop_name: item.shop_name },
+    sold_count: item.sold_count,
+    price_sale: item.price_sale
+  }));
+
+  // 3. Top Shops (SỬA LẠI LOGIC TÍNH TỔNG)
+  // Bước 3.1: Dùng CTE (WITH unique_products) để chỉ lấy 1 dòng duy nhất cho mỗi sản phẩm
+  // Bước 3.2: Sau đó mới SUM trên danh sách đã khử trùng
+  const topShopsRaw: any[] = await prisma.$queryRaw`
+    WITH unique_products AS (
+      SELECT DISTINCT ON (f.product_key) -- Chỉ lấy 1 dòng duy nhất cho mỗi Product Key
+        f.product_key,
+        f.shop_key,
+        f.sold_count,
+        f.price_sale
+      FROM "warehouse"."fact_sales_snapshot" f
+      WHERE f.date_key = ${latestDateKey}
+      ORDER BY f.product_key, f.sold_count DESC -- Nếu trùng thì ưu tiên lấy số lớn nhất
+    )
+    SELECT 
+      s.shop_name, 
+      SUM(u.sold_count * u.price_sale) as revenue,
+      SUM(u.sold_count) as total_sold
+    FROM unique_products u
+    JOIN "warehouse"."dim_shop" s ON u.shop_key = s.shop_key
+    GROUP BY s.shop_name
+    ORDER BY revenue DESC
+    LIMIT 5
+  `;
+
+  return {
+    topProducts: serializeData(topProductsFormatted),
+    topShops: serializeData(topShopsRaw),
+    latestDate: dateDisplay
+  };
 }
 
-export async function deleteSource(id: number) {
-  try {
-    await prisma.source_config.delete({
-      where: { id },
-    });
-    revalidatePath("/sources");
-    return { success: true };
-  } catch (error) {
-    return { error: "Failed to delete source" };
-  }
-}
+export default async function AnalyticsPage() {
+  const data = await getWarehouseData();
 
-export async function updateSource(id: number, formData: FormData) {
-  const source_name = formData.get("source_name") as string;
-  const base_url = formData.get("base_url") as string;
-  const is_active = formData.get("is_active") !== null;
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Warehouse Analytics</h1>
+        <div className="flex items-center gap-2 text-default-500 text-sm bg-default-100 px-3 py-1 rounded-full">
+            <CalendarIcon size={14} />
+            <span>Data Date: <strong>{data.latestDate}</strong></span>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Top Products Card */}
+        <Card>
+          <CardHeader className="flex gap-3">
+            <TrendingUpIcon className="text-primary" />
+            <div className="flex flex-col">
+              <p className="text-md font-bold">Top Selling Products</p>
+              <p className="text-small text-default-500">Highest cumulative sold count</p>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <TopProductsTable products={data.topProducts} />
+          </CardBody>
+        </Card>
 
-  if (!source_name || !base_url) {
-    return { error: "Name and URL are required" };
-  }
+        {/* Top Shops Card */}
+        <Card>
+          <CardHeader className="flex gap-3">
+            <StoreIcon className="text-success" />
+            <div className="flex flex-col">
+              <p className="text-md font-bold">Top Revenue Shops</p>
+              <p className="text-small text-default-500">Estimated revenue based on sold count</p>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <TopShopsTable shops={data.topShops} />
+          </CardBody>
+        </Card>
 
-  try {
-    await prisma.source_config.update({
-      where: { id },
-      data: {
-        source_name,
-        base_url,
-        is_active,
-      },
-    });
-
-    revalidatePath("/sources");
-    return { success: true };
-  } catch (error) {
-    console.error("Update source error:", error);
-    return { error: "Failed to update source." };
-  }
+      </div>
+    </div>
+  );
 }
 
 ================
-File: app/products/page.tsx
+File: app/products/[id]/page.tsx
 ================
-"use client";
+import { prisma } from "@/lib/prisma";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { Chip } from "@heroui/chip";
+import { User } from "@heroui/user";
+import { ProductHistoryChart } from "@/components/product-history-chart";
+import { ArrowLeftIcon, CalendarIcon, StoreIcon } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@heroui/button";
+// Import component bảng đã tách ra để tránh lỗi Server Component
+import { ProductVersionHistoryTable } from "@/components/product-version-history-table";
 
+// Hàm lấy dữ liệu chi tiết sản phẩm từ Warehouse
+async function getProductDetail(productId: string) {
+  // 1. Lấy thông tin Dimension hiện tại (Current Version)
+  const currentDim = await prisma.dim_product.findFirst({
+    where: { 
+      product_id: productId,
+      is_current: true 
+    }
+  });
 
-import {Table, TableHeader, TableColumn, TableBody, TableRow, TableCell} from '@heroui/table';
-// Mock mapping DB fields
-const products = [
-  { id: "1", product_id: "SP001", title: "iPhone 15 Pro Max", price_sale: 29990000, sold_count: 120, seller_id: "SHOP_APPLE" },
-  { id: "2", product_id: "SP002", title: "Samsung S24 Ultra", price_sale: 25000000, sold_count: 50, seller_id: "SHOP_SAMSUNG" },
-];
+  // Nếu không tìm thấy sản phẩm hiện tại, trả về null
+  if (!currentDim) return null;
 
-export default function ProductsPage() {
+  // 2. Lấy lịch sử biến động giá/kho từ Fact Table (Inventory Snapshot)
+  // Join với Dim Date để lấy ngày tháng hiển thị cho biểu đồ
+  const historyRaw: any[] = await prisma.$queryRaw`
+    SELECT 
+      d.full_date,
+      f.stock,
+      f.price_real
+    FROM "warehouse"."fact_inventory_snapshot" f
+    JOIN "warehouse"."dim_sku" s ON f.sku_key = s.sku_key
+    JOIN "warehouse"."dim_date" d ON f.date_key = d.date_key
+    WHERE s.product_key = ${currentDim.product_key}
+    ORDER BY d.full_date ASC
+    LIMIT 30 -- Lấy 30 ngày gần nhất
+  `;
+
+  // 3. Lấy lịch sử thay đổi thông tin (SCD Type 2 History)
+  // Xem sản phẩm này đã thay đổi tiêu đề/mô tả/danh mục bao nhiêu lần
+  const versionHistory = await prisma.dim_product.findMany({
+    where: { product_id: productId },
+    orderBy: { valid_from: 'desc' },
+    select: {
+      title: true,
+      valid_from: true,
+      valid_to: true,
+      is_current: true
+    }
+  });
+
+  return {
+    info: currentDim,
+    // Map dữ liệu cho Recharts
+    chartData: historyRaw.map(item => ({
+        date: new Date(item.full_date).toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit'}),
+        price: Number(item.price_real),
+        stock: item.stock
+    })),
+    versions: versionHistory
+  };
+}
+
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  // Decode ID vì URL có thể chứa ký tự đặc biệt (ví dụ dấu cách, tiếng Việt)
+  const decodedId = decodeURIComponent(id);
+  const data = await getProductDetail(decodedId);
+
+  if (!data) {
+    return (
+        <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
+            <h2 className="text-xl font-bold text-default-500">Product Not Found in Warehouse</h2>
+            <Link href="/products">
+                <Button color="primary" variant="flat">Back to List</Button>
+            </Link>
+        </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 1. Header & Back Button */}
+      <div className="flex items-center gap-4">
+        <Link href="/products">
+          <Button isIconOnly variant="flat" size="sm"><ArrowLeftIcon size={20}/></Button>
+        </Link>
+        <div>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+                Product 360 View
+                <Chip size="sm" color="success" variant="flat">Warehouse Data</Chip>
+            </h1>
+            <p className="text-default-500 text-sm font-mono">ID: {decodedId}</p>
+        </div>
+      </div>
+
+      {/* 2. Main Content Grid: Info & Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Column: Product Information */}
+        <Card className="lg:col-span-1 h-full">
+            <CardHeader>
+                <h3 className="font-semibold text-lg">Current Dimension Info</h3>
+            </CardHeader>
+            <CardBody className="flex flex-col gap-5">
+                <User 
+                    name={<span className="text-lg font-semibold line-clamp-2">{data.info.title}</span>}
+                    description={data.info.product_id}
+                    avatarProps={{ radius: "lg", size: "lg", isBordered: true }}
+                />
+                
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm p-2 bg-default-100 rounded-lg">
+                        <div className="flex items-center gap-2 text-default-500">
+                            <StoreIcon size={16} />
+                            <span>Seller ID</span>
+                        </div>
+                        <span className="font-mono font-bold">{data.info.seller_id}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm p-2 bg-default-100 rounded-lg">
+                        <div className="flex items-center gap-2 text-default-500">
+                            <CalendarIcon size={16} />
+                            <span>Valid From</span>
+                        </div>
+                        <span>{data.info.valid_from ? new Date(data.info.valid_from).toLocaleDateString('vi-VN') : 'N/A'}</span>
+                    </div>
+                </div>
+                
+                <div className="p-3 border border-default-200 rounded-lg text-sm bg-background">
+                    <p className="font-semibold mb-2 text-default-600">Description Snapshot:</p>
+                    <p className="line-clamp-[8] text-default-500 leading-relaxed">
+                        {data.info.description || "No description available."}
+                    </p>
+                </div>
+            </CardBody>
+        </Card>
+
+        {/* Right Column: Price & Stock Chart */}
+        <div className="lg:col-span-2">
+             <ProductHistoryChart data={data.chartData} />
+        </div>
+      </div>
+
+      {/* 3. Bottom Section: Version History Table (SCD Type 2) */}
+      <Card>
+        <CardHeader>
+            <div className="flex flex-col">
+                <h3 className="font-semibold text-lg">Dimension History Log</h3>
+                <p className="text-small text-default-500">Slowly Changing Dimension (SCD Type 2) tracking</p>
+            </div>
+        </CardHeader>
+        <CardBody>
+            {/* Component bảng được tách ra để chạy phía Client */}
+            <ProductVersionHistoryTable versions={data.versions} />
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
+================
+File: app/raw-data/page.tsx
+================
+import { prisma } from "@/lib/prisma";
+import { RawDataTable } from "@/components/raw-data-table";
+import { serializeData } from "@/lib/utils";
+
+const ITEMS_PER_PAGE = 10;
+
+export default async function RawDataPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const page = Number(params?.page) || 1;
+  const skip = (page - 1) * ITEMS_PER_PAGE;
+
+  const [products, totalCount] = await prisma.$transaction([
+    prisma.tbl_products_raw.findMany({
+      skip,
+      take: ITEMS_PER_PAGE,
+      orderBy: { id: 'desc' },
+      select: {
+        id: true,
+        product_id: true,
+        source_file_name: true,
+        load_timestamp: true,
+        raw_data: true,
+      }
+    }),
+    prisma.tbl_products_raw.count()
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  
+  const serializedProducts = serializeData(products);
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Base Products</h1>
-      <Table aria-label="Products table">
-        <TableHeader>
-          <TableColumn>PRODUCT ID</TableColumn>
-          <TableColumn>TITLE</TableColumn>
-          <TableColumn>PRICE</TableColumn>
-          <TableColumn>SOLD</TableColumn>
-          <TableColumn>SELLER</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {products.map((p) => (
-            <TableRow key={p.id}>
-              <TableCell>{p.product_id}</TableCell>
-              <TableCell className="max-w-xs truncate">{p.title}</TableCell>
-              <TableCell>
-                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.price_sale)}
-              </TableCell>
-              <TableCell>{p.sold_count}</TableCell>
-              <TableCell>{p.seller_id}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Raw Product Data</h1>
+        <div className="text-small text-default-500">
+            Total: {new Intl.NumberFormat('vi-VN').format(totalCount)} records
+        </div>
+      </div>
+      <RawDataTable data={serializedProducts} totalPages={totalPages} />
+    </div>
+  );
+}
+
+================
+File: app/reviews/page.tsx
+================
+import { prisma } from "@/lib/prisma";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { serializeData } from "@/lib/utils";
+import { MessageSquareWarningIcon } from "lucide-react";
+import { RatingPieChart } from "@/components/rating-pie-chart";
+import { NegativeReviewsTable } from "@/components/negative-reviews-table";
+
+async function getReviewData() {
+  // 1. Lấy phân bố rating (GROUP BY rating)
+  const ratingDistributionRaw: any[] = await prisma.$queryRaw`
+    SELECT 
+      rating, 
+      COUNT(*)::int as count 
+    FROM "warehouse"."fact_reviews"
+    WHERE rating IS NOT NULL
+    GROUP BY rating
+    ORDER BY rating ASC
+  `;
+
+  // Map lại dữ liệu cho biểu đồ (đảm bảo đủ 1-5 sao)
+  const ratingMap = new Map(ratingDistributionRaw.map(r => [r.rating, r.count]));
+  const chartData = [1, 2, 3, 4, 5].map(star => ({
+    rating: `${star} Stars`,
+    count: ratingMap.get(star) || 0
+  }));
+
+  // 2. Lấy 10 đánh giá tiêu cực gần nhất (1-2 sao)
+  const negativeReviews = await prisma.fact_reviews.findMany({
+    where: {
+      rating: { lte: 2 } // Nhỏ hơn hoặc bằng 2 sao
+    },
+    take: 10,
+    orderBy: { review_timestamp: 'desc' },
+    include: {
+      dim_shop: { select: { shop_name: true } },
+      dim_sku: {
+        include: {
+            dim_product: { select: { title: true } }
+        }
+      }
+    }
+  });
+
+  return {
+    chartData,
+    negativeReviews: serializeData(negativeReviews)
+  };
+}
+
+export default async function ReviewsPage() {
+  const data = await getReviewData();
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Customer Voice & Reviews</h1>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Cột trái: Biểu đồ */}
+        <div className="lg:col-span-1">
+             <RatingPieChart data={data.chartData} />
+        </div>
+
+        {/* Cột phải: Danh sách cảnh báo */}
+        <div className="lg:col-span-2">
+            <Card className="h-full min-h-[350px]">
+                <CardHeader className="flex gap-3">
+                    <MessageSquareWarningIcon className="text-danger" />
+                    <div className="flex flex-col">
+                        <p className="text-md font-bold">Recent Negative Reviews</p>
+                        <p className="text-small text-default-500">Alerts for 1-2 star ratings</p>
+                    </div>
+                </CardHeader>
+                <CardBody>
+                    <NegativeReviewsTable reviews={data.negativeReviews} />
+                </CardBody>
+            </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+================
+File: app/shops/page.tsx
+================
+import { prisma } from "@/lib/prisma";
+import { ShopsTable } from "@/components/shops-table";
+import SearchInput from "@/components/search-input"; // Tái sử dụng component search cũ
+import { serializeData } from "@/lib/utils";
+
+const ITEMS_PER_PAGE = 10;
+
+export default async function ShopsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const query = params?.query || "";
+  const page = Number(params?.page) || 1;
+  const skip = (page - 1) * ITEMS_PER_PAGE;
+
+  // Điều kiện lọc
+  const whereCondition = query
+    ? {
+        OR: [
+          { shop_name: { contains: query, mode: "insensitive" as const } },
+          { seller_id: { contains: query, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const [shops, totalCount] = await prisma.$transaction([
+    prisma.tbl_base_shop_info.findMany({
+      where: whereCondition,
+      skip,
+      take: ITEMS_PER_PAGE,
+      orderBy: { followers_count: "desc" }, // Sắp xếp mặc định theo follower
+    }),
+    prisma.tbl_base_shop_info.count({ where: whereCondition }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const serializedShops = serializeData(shops);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Shop Directory</h1>
+        <SearchInput placeholder="Search shop name..." />
+      </div>
+      <ShopsTable shops={serializedShops} totalPages={totalPages} />
     </div>
   );
 }
@@ -298,61 +690,19 @@ export default function RootLayout({
 }
 
 ================
-File: app/page.tsx
+File: app/loading.tsx
 ================
-"use client";
+import { Spinner } from "@heroui/spinner";
 
-import { Card, CardBody } from "@heroui/card";
-import { DatabaseIcon, ActivityIcon, AlertCircleIcon } from "lucide-react";
-
-export default function Dashboard() {
+export default function Loading() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard Overview</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatsCard 
-          title="Active Sources" 
-          value="5" 
-          icon={<DatabaseIcon className="text-primary" />} 
-        />
-        <StatsCard 
-          title="Total Products" 
-          value="12,450" 
-          icon={<ActivityIcon className="text-success" />} 
-        />
-        <StatsCard 
-          title="Failed Jobs Today" 
-          value="2" 
-          icon={<AlertCircleIcon className="text-danger" />} 
-        />
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">System Health</h2>
-        <Card>
-          <CardBody>
-            <p className="text-default-500">Charts or detailed stats can go here (integration with Fact tables).</p>
-          </CardBody>
-        </Card>
+    <div className="flex h-[50vh] w-full items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Spinner size="lg" color="primary" label="Loading data..." />
       </div>
     </div>
   );
 }
-
-const StatsCard = ({ title, value, icon }: any) => (
-  <Card>
-    <CardBody className="flex flex-row items-center gap-4 p-6">
-      <div className="p-3 bg-default-100 rounded-large">
-        {icon}
-      </div>
-      <div>
-        <p className="text-small text-default-500">{title}</p>
-        <h4 className="text-2xl font-bold">{value}</h4>
-      </div>
-    </CardBody>
-  </Card>
-);
 
 ================
 File: app/providers.tsx
@@ -388,6 +738,77 @@ export function Providers({ children, themeProps }: ProvidersProps) {
     </HeroUIProvider>
   );
 }
+
+================
+File: components/analytics-tables.tsx
+================
+"use client"; // Bắt buộc phải có dòng này
+
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+
+// Component hiển thị bảng Top Products
+export const TopProductsTable = ({ products }: { products: any[] }) => {
+  return (
+    <Table aria-label="Top products" removeWrapper>
+      <TableHeader>
+        <TableColumn>PRODUCT</TableColumn>
+        <TableColumn>SHOP</TableColumn>
+        <TableColumn>SOLD COUNT</TableColumn>
+        <TableColumn>PRICE</TableColumn>
+      </TableHeader>
+      <TableBody emptyContent="No data">
+        {products.map((item: any, index: number) => (
+          <TableRow key={index}>
+            <TableCell>
+              <div className="w-[150px] truncate" title={item.dim_product?.title}>
+                {item.dim_product?.title || item.dim_product?.product_id}
+              </div>
+            </TableCell>
+            <TableCell>{item.dim_shop?.shop_name || "N/A"}</TableCell>
+            <TableCell className="font-bold">
+              {new Intl.NumberFormat("vi-VN").format(item.sold_count)}
+            </TableCell>
+            <TableCell>
+              {new Intl.NumberFormat("vi-VN", {
+                style: "currency",
+                currency: "VND",
+              }).format(item.price_sale)}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+};
+
+// Component hiển thị bảng Top Shops
+export const TopShopsTable = ({ shops }: { shops: any[] }) => {
+  return (
+    <Table aria-label="Top shops" removeWrapper>
+      <TableHeader>
+        <TableColumn>SHOP NAME</TableColumn>
+        <TableColumn>TOTAL SOLD</TableColumn>
+        <TableColumn>EST. REVENUE</TableColumn>
+      </TableHeader>
+      <TableBody emptyContent="No data">
+        {shops.map((item: any, index: number) => (
+          <TableRow key={index}>
+            <TableCell className="font-semibold">{item.shop_name}</TableCell>
+            <TableCell>
+              {new Intl.NumberFormat("vi-VN").format(item.total_sold)}
+            </TableCell>
+            <TableCell className="text-success font-bold">
+              {new Intl.NumberFormat("vi-VN", {
+                style: "currency",
+                currency: "VND",
+              }).format(item.revenue)}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+};
 
 ================
 File: components/counter.tsx
@@ -491,6 +912,89 @@ export const CreateSourceModal = () => {
       </Modal>
     </>
   );
+};
+
+================
+File: components/dashboard-chart.tsx
+================
+"use client";
+
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from "recharts";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+
+interface ChartData {
+    date: string;
+    count: number;
+}
+
+export const DashboardChart = ({ data }: { data: ChartData[] }) => {
+    return (
+        <Card className="lg:col-span-2 min-h-[400px]">
+            <CardHeader>
+                <h3 className="font-semibold text-lg">Products Collected (Last 7 Days)</h3>
+            </CardHeader>
+            <CardBody>
+                <div className="w-full h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                            data={data}
+                            margin={{
+                                top: 10,
+                                right: 30,
+                                left: 0,
+                                bottom: 0,
+                            }}
+                        >
+                            <defs>
+                                <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#006FEE" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#006FEE" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
+                            <XAxis
+                                dataKey="date"
+                                stroke="#9CA3AF"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                stroke="#9CA3AF"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value) => `${value}`}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: "#18181b",
+                                    border: "1px solid #3f3f46",
+                                    borderRadius: "8px",
+                                }}
+                                itemStyle={{ color: "#fff" }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="count"
+                                stroke="#006FEE"
+                                fillOpacity={1}
+                                fill="url(#colorCount)"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </CardBody>
+        </Card>
+    );
 };
 
 ================
@@ -788,6 +1292,62 @@ export const SearchIcon = (props: IconSvgProps) => (
 );
 
 ================
+File: components/negative-reviews-table.tsx
+================
+"use client";
+
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import { User } from "@heroui/user";
+import { Chip } from "@heroui/chip";
+import { StarIcon } from "lucide-react";
+
+export const NegativeReviewsTable = ({ reviews }: { reviews: any[] }) => {
+  return (
+    <Table aria-label="Negative reviews" removeWrapper>
+      <TableHeader>
+        <TableColumn>PRODUCT</TableColumn>
+        <TableColumn>RATING</TableColumn>
+        <TableColumn>COMMENT</TableColumn>
+        <TableColumn>DATE</TableColumn>
+      </TableHeader>
+      <TableBody emptyContent="No negative reviews found">
+        {reviews.map((review, idx) => (
+          <TableRow key={idx}>
+            <TableCell>
+              <div className="flex flex-col">
+                <span className="text-small font-bold truncate w-[200px]" title={review.dim_sku?.dim_product?.title}>
+                    {review.dim_sku?.dim_product?.title || "Unknown Product"}
+                </span>
+                <span className="text-tiny text-default-400">{review.dim_shop?.shop_name}</span>
+              </div>
+            </TableCell>
+            <TableCell>
+                <div className="flex gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                        <StarIcon 
+                            key={i} 
+                            size={12} 
+                            className={i < review.rating ? "text-danger fill-danger" : "text-default-200"} 
+                        />
+                    ))}
+                </div>
+            </TableCell>
+            <TableCell>
+                <div className="max-w-[300px] text-small italic text-default-500 truncate">
+                    "{review.review_id}" (Content placeholder)
+                </div>
+            </TableCell>
+            <TableCell>
+                {review.review_timestamp ? new Date(review.review_timestamp).toLocaleDateString('vi-VN') : 'N/A'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+};
+
+================
 File: components/primitives.ts
 ================
 import { tv } from "tailwind-variants";
@@ -845,207 +1405,515 @@ export const subtitle = tv({
 });
 
 ================
-File: components/sidebar.tsx
+File: components/product-history-chart.tsx
 ================
 "use client";
 
-import { usePathname } from "next/navigation";
-import Link from "next/link";
 import {
-    HomeIcon,
-    DatabaseIcon,
-    FileTextIcon,
-    SettingsIcon,
-    LayersIcon
-} from "lucide-react";
-import { ThemeSwitch } from "./theme-switch";
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+} from "recharts";
+import { Card, CardBody, CardHeader } from "@heroui/card";
 
-const menuItems = [
-    { name: "Dashboard", href: "/", icon: HomeIcon },
-    { name: "Source Configs", href: "/sources", icon: SettingsIcon },
-    { name: "Crawl Logs", href: "/logs", icon: FileTextIcon },
-    { name: "Raw Products", href: "/raw-data", icon: DatabaseIcon },
-    { name: "Base Products", href: "/products", icon: LayersIcon },
-];
-
-export const Sidebar = () => {
-    const pathname = usePathname();
-
+export const ProductHistoryChart = ({ data }: { data: any[] }) => {
     return (
-        <div className="w-64 h-screen bg-content1 border-r border-divider flex flex-col fixed left-0 top-0 z-50">
-            <div className="h-16 flex items-center px-6 border-b border-divider">
-                <span className="text-xl font-bold text-primary">DW Admin</span>
-            </div>
+        <Card className="min-h-[400px]">
+            <CardHeader>
+                <h3 className="font-semibold text-lg">Price & Stock History</h3>
+            </CardHeader>
+            <CardBody>
+                <div className="w-full h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                            data={data}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="date" fontSize={12} stroke="#888888" />
 
-            <nav className="flex-1 overflow-y-auto py-4">
-                <ul className="flex flex-col gap-2 px-3">
-                    {menuItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <li key={item.href}>
-                                <Link
-                                    href={item.href}
-                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-medium transition-colors ${isActive
-                                            ? "bg-primary text-primary-foreground font-medium"
-                                            : "text-default-500 hover:bg-default-100 hover:text-foreground"
-                                        }`}
-                                >
-                                    <item.icon size={20} />
-                                    <span>{item.name}</span>
-                                </Link>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </nav>
+                            {/* Trục Y trái: Giá tiền */}
+                            <YAxis
+                                yAxisId="left"
+                                fontSize={12}
+                                tickFormatter={(val) => `${val / 1000}k`}
+                                stroke="#006FEE"
+                            />
 
-            <div className="p-4 border-t border-divider">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-default-600">Appearance</span>
-                    <div className="bg-default-100 rounded-medium p-3 mt-2">
-                        <p className="text-xs text-default-500 font-semibold">DW</p>
-                        <p className="text-[10px] text-default-400">Version 1.0.0</p>
-                    </div>
-                    <ThemeSwitch />
+                            {/* Trục Y phải: Tồn kho */}
+                            <YAxis
+                                yAxisId="right"
+                                orientation="right"
+                                fontSize={12}
+                                stroke="#17C964"
+                            />
+
+                            <Tooltip
+                                contentStyle={{ backgroundColor: "#1f1f1f", border: "none", borderRadius: "8px" }}
+                                labelStyle={{ color: "#aaa" }}
+                            />
+                            <Legend />
+
+                            <Line
+                                yAxisId="left"
+                                type="monotone"
+                                dataKey="price"
+                                stroke="#006FEE"
+                                name="Price (VND)"
+                                strokeWidth={2}
+                                dot={false}
+                            />
+                            <Line
+                                yAxisId="right"
+                                type="monotone"
+                                dataKey="stock"
+                                stroke="#17C964"
+                                name="Stock (Qty)"
+                                strokeWidth={2}
+                                dot={false}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
-            </div>
-        </div>
+            </CardBody>
+        </Card>
     );
 };
 
 ================
-File: components/sources-table.tsx
+File: components/product-version-history-table.tsx
 ================
 "use client";
 
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
-import { Chip } from '@heroui/chip';
-import { Tooltip } from '@heroui/tooltip'
-import { EditIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Pagination } from '@heroui/pagination'
-import { EditSourceModal } from '@/components/edit-source-modal';
-import { deleteSource } from '@/app/actions/sources';
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import { Chip } from "@heroui/chip";
 
-interface SourcesTableProps {
-    sources: any[];
-    totalPages: number;
-}
-
-const statusColorMap: Record<string, "success" | "danger" | "warning"> = {
-    SUCCESS: "success",
-    FAILED: "danger",
-    PENDING: "warning",
+export const ProductVersionHistoryTable = ({ versions }: { versions: any[] }) => {
+  return (
+    <Table aria-label="Version history" removeWrapper>
+      <TableHeader>
+        <TableColumn>VALID FROM</TableColumn>
+        <TableColumn>VALID TO</TableColumn>
+        <TableColumn>STATUS</TableColumn>
+        <TableColumn>TITLE SNAPSHOT</TableColumn>
+      </TableHeader>
+      <TableBody emptyContent="No history data">
+        {versions.map((ver: any, idx: number) => (
+          <TableRow key={idx}>
+            <TableCell>
+              {ver.valid_from ? new Date(ver.valid_from).toLocaleString("vi-VN") : "N/A"}
+            </TableCell>
+            <TableCell>
+              {ver.valid_to && new Date(ver.valid_to).getFullYear() < 9000
+                ? new Date(ver.valid_to).toLocaleString("vi-VN")
+                : "∞"}
+            </TableCell>
+            <TableCell>
+              <Chip
+                size="sm"
+                color={ver.is_current ? "success" : "default"}
+                variant="flat"
+              >
+                {ver.is_current ? "Current" : "Historical"}
+              </Chip>
+            </TableCell>
+            <TableCell>
+              <div className="max-w-[400px] truncate text-default-500 italic" title={ver.title}>
+                {ver.title}
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 };
 
-export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
+================
+File: components/rating-pie-chart.tsx
+================
+"use client";
+
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+
+const COLORS = ["#F31260", "#F5A524", "#eab308", "#17C964", "#006FEE"]; // Đỏ -> Cam -> Vàng -> Xanh lá -> Xanh dương
+
+export const RatingPieChart = ({ data }: { data: any[] }) => {
+  return (
+    <Card className="h-full min-h-[350px]">
+      <CardHeader>
+        <h3 className="font-semibold text-lg">Rating Distribution</h3>
+      </CardHeader>
+      <CardBody>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="count"
+              nameKey="rating"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip 
+                formatter={(value: number) => new Intl.NumberFormat('vi-VN').format(value) + " reviews"}
+                contentStyle={{ backgroundColor: "#1f1f1f", border: "none", borderRadius: "8px" }}
+            />
+            <Legend verticalAlign="bottom" height={36}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </CardBody>
+    </Card>
+  );
+};
+
+================
+File: components/raw-data-table.tsx
+================
+"use client";
+
+import { useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@heroui/table";
+import { Pagination } from "@heroui/pagination";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/modal";
+import { Button } from "@heroui/button";
+import { EyeIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+
+// Import động để tránh lỗi SSR (Server Side Rendering) vì thư viện này cần window
+const ReactJson = dynamic(() => import("react-json-view"), { ssr: false });
+
+interface RawProduct {
+    id: string;
+    product_id: string;
+    source_file_name: string | null;
+    load_timestamp: string;
+    raw_data: any;
+}
+
+export const RawDataTable = ({
+    data,
+    totalPages
+}: {
+    data: RawProduct[];
+    totalPages: number
+}) => {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { isOpen, onOpen, onOpenChange } = useDisclosure();
+    const [selectedJson, setSelectedJson] = useState<any>(null);
 
     const currentPage = Number(searchParams.get("page")) || 1;
-
-    const formatDate = (date: Date | null) => {
-        if (!date) return "N/A";
-        return new Date(date).toLocaleString('vi-VN');
-    };
 
     const handlePageChange = (page: number) => {
         const params = new URLSearchParams(searchParams);
         params.set("page", page.toString());
         router.push(`${pathname}?${params.toString()}`);
     };
-    const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this source?")) {
-            await deleteSource(id);
-        }
+
+    const handleViewJson = (json: any) => {
+        setSelectedJson(json);
+        onOpen();
     };
 
     return (
-        <Table
-            aria-label="Source configs table"
-            bottomContent={
-                totalPages > 1 ? (
-                    <div className="flex w-full justify-center">
-                        <Pagination
-                            isCompact
-                            showControls
-                            showShadow
-                            color="primary"
-                            page={currentPage}
-                            total={totalPages}
-                            onChange={handlePageChange}
-                        />
-                    </div>
-                ) : null
-            }
-        >
+        <>
+            <Table
+                aria-label="Raw products table"
+                bottomContent={
+                    totalPages > 1 && (
+                        <div className="flex w-full justify-center">
+                            <Pagination
+                                isCompact
+                                showControls
+                                showShadow
+                                color="primary"
+                                page={currentPage}
+                                total={totalPages}
+                                onChange={handlePageChange}
+                            />
+                        </div>
+                    )
+                }
+            >
+                <TableHeader>
+                    <TableColumn>ID</TableColumn>
+                    <TableColumn>PRODUCT ID</TableColumn>
+                    <TableColumn>SOURCE FILE</TableColumn>
+                    <TableColumn>LOAD TIME</TableColumn>
+                    <TableColumn>ACTIONS</TableColumn>
+                </TableHeader>
+                <TableBody emptyContent="No raw data found">
+                    {data.map((item) => (
+                        <TableRow key={item.id}>
+                            <TableCell>#{item.id}</TableCell>
+                            <TableCell className="font-semibold">{item.product_id}</TableCell>
+                            <TableCell>{item.source_file_name || "N/A"}</TableCell>
+                            <TableCell>{item.load_timestamp ? new Date(item.load_timestamp).toLocaleString('vi-VN') : ''}</TableCell>
+                            <TableCell>
+                                <Button
+                                    size="sm"
+                                    variant="flat"
+                                    color="primary"
+                                    isIconOnly
+                                    onPress={() => handleViewJson(item.raw_data)}
+                                >
+                                    <EyeIcon size={18} />
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+
+            {/* JSON Viewer Modal */}
+            <Modal
+                isOpen={isOpen}
+                onOpenChange={onOpenChange}
+                size="5xl" // Tăng size modal để xem cho thoải mái
+                scrollBehavior="inside"
+            >
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">Raw JSON Inspector</ModalHeader>
+                            <ModalBody className="p-0">
+                                {/* p-0 để viewer full viền */}
+                                <div className="min-h-[400px] max-h-[70vh] overflow-auto bg-[#1e1e1e]">
+                                    {selectedJson && (
+                                        <ReactJson
+                                            src={
+                                                typeof selectedJson === 'string'
+                                                    ? JSON.parse(selectedJson)
+                                                    : (selectedJson || {})
+                                            }
+                                            theme="monokai"
+                                            collapsed={1}
+                                            displayDataTypes={false}
+                                            enableClipboard={true}
+                                            style={{ padding: '20px', backgroundColor: 'transparent' }}
+                                        />
+                                    )}
+                                </div>
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="danger" variant="light" onPress={onClose}>
+                                    Close
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+        </>
+    );
+};
+
+================
+File: components/recent-logs-table.tsx
+================
+"use client"; 
+
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import { Chip } from "@heroui/chip";
+
+export const RecentLogsTable = ({ logs }: { logs: any[] }) => {
+    return (
+        <Table aria-label="Recent logs" removeWrapper>
             <TableHeader>
-                <TableColumn>ID</TableColumn>
-                <TableColumn>SOURCE NAME</TableColumn>
+                <TableColumn>SOURCE_NAME</TableColumn>
+                <TableColumn>SOURCE_ID</TableColumn>
                 <TableColumn>STATUS</TableColumn>
-                <TableColumn>LAST CRAWL</TableColumn>
-                <TableColumn>ACTIONS</TableColumn>
             </TableHeader>
-            <TableBody emptyContent={"No rows to display."}>
-                {sources.map((source) => (
-                    <TableRow key={source.id}>
-                        <TableCell>#{source.id}</TableCell>
+            <TableBody emptyContent="No recent activity">
+                {logs.map((log) => (
+                    <TableRow key={log.id}>
                         <TableCell>
                             <div className="flex flex-col">
-                                <span className="font-bold text-sm">{source.source_name}</span>
-                                <span className="text-tiny text-default-400 truncate max-w-[200px]">
-                                    {source.base_url}
+                                <span className="text-small font-bold">
+                                    {log.source_config?.source_name || "Unknown Source"}
+                                </span>
+                                <span className="text-tiny text-default-400">
+                                    {log.created_at
+                                        ? new Date(log.created_at).toLocaleTimeString("vi-VN")
+                                        : ""}
+                                </span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex flex-col">
+                                <span className="text-small font-bold">
+                                    #{log.source_config?.id || "Unknown Source"}
                                 </span>
                             </div>
                         </TableCell>
                         <TableCell>
                             <Chip
-                                className="capitalize"
-                                color={source.is_active ? "success" : "default"}
                                 size="sm"
-                                variant="flat"
+                                variant="dot"
+                                color={
+                                    log.status === "SUCCESS"
+                                        ? "success"
+                                        : log.status === "FAILED"
+                                            ? "danger"
+                                            : "warning"
+                                }
                             >
-                                {source.is_active ? "Active" : "Inactive"}
+                                {log.status}
                             </Chip>
-                        </TableCell>
-                        <TableCell>
-                            <div className="flex flex-col gap-1">
-                                <Chip
-                                    size="sm"
-                                    color={statusColorMap[source.last_crawl_status || "PENDING"] || "default"}
-                                    variant="dot"
-                                >
-                                    {source.last_crawl_status || "N/A"}
-                                </Chip>
-                                <span className="text-tiny text-default-400">
-                                    {formatDate(source.last_crawl_timestamp)}
-                                </span>
-                            </div>
-                        </TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-2">
-                                <EditSourceModal source={source} />
-                                <Tooltip color="danger" content="Delete source">
-                                    <span
-                                        className="text-lg text-danger cursor-pointer active:opacity-50 hover:opacity-100"
-                                        onClick={() => handleDelete(source.id)}
-                                    >
-                                        <TrashIcon size={18} />
-                                    </span>
-                                </Tooltip>
-                                <Tooltip content="Trigger Crawl">
-                                    <span className="text-lg text-primary cursor-pointer active:opacity-50 hover:opacity-100">
-                                        <RefreshCwIcon size={18} />
-                                    </span>
-                                </Tooltip>
-                            </div>
                         </TableCell>
                     </TableRow>
                 ))}
             </TableBody>
         </Table>
     );
+};
+
+================
+File: components/search-input.tsx
+================
+"use client";
+
+import { Input } from "@heroui/input";
+import { SearchIcon } from "lucide-react";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { useDebouncedCallback } from "use-debounce";
+
+export default function SearchInput({ placeholder }: { placeholder: string }) {
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const { replace } = useRouter();
+
+    const handleSearch = useDebouncedCallback((term: string) => {
+        const params = new URLSearchParams(searchParams);
+        params.set("page", "1");
+        if (term) {
+            params.set("query", term);
+        } else {
+            params.delete("query");
+        }
+        replace(`${pathname}?${params.toString()}`);
+    }, 300);
+
+    return (
+        <Input
+            classNames={{
+                base: "max-w-full sm:max-w-[20rem] h-10",
+                mainWrapper: "h-full",
+                input: "text-small",
+                inputWrapper: "h-full font-normal text-default-500 bg-default-400/20 dark:bg-default-500/20",
+            }}
+            placeholder={placeholder}
+            size="sm"
+            startContent={<SearchIcon size={18} />}
+            type="search"
+            defaultValue={searchParams.get("query")?.toString()}
+            onChange={(e) => handleSearch(e.target.value)}
+        />
+    );
+}
+
+================
+File: components/shops-table.tsx
+================
+"use client";
+
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import { User } from "@heroui/user";
+import { Chip } from "@heroui/chip";
+import { Pagination } from "@heroui/pagination";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { StarIcon, MapPinIcon } from "lucide-react";
+
+export const ShopsTable = ({ shops, totalPages }: { shops: any[], totalPages: number }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPage = Number(searchParams.get("page")) || 1;
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", page.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  // Helper format số lượng (vd: 1.2k)
+  const formatCompactNumber = (number: number) => {
+    return new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(number);
+  };
+
+  return (
+    <Table 
+      aria-label="Shops table"
+      bottomContent={
+        totalPages > 1 && (
+          <div className="flex w-full justify-center">
+             <Pagination showControls page={currentPage} total={totalPages} onChange={handlePageChange} />
+          </div>
+        )
+      }
+    >
+      <TableHeader>
+        <TableColumn>SHOP INFO</TableColumn>
+        <TableColumn>RATING</TableColumn>
+        <TableColumn>FOLLOWERS</TableColumn>
+        <TableColumn>PRODUCTS</TableColumn>
+        <TableColumn>REGION</TableColumn>
+      </TableHeader>
+      <TableBody emptyContent="No shops found">
+        {shops.map((shop) => {
+            // Xử lý ảnh Logo từ JSON
+            const logoData = shop.shop_logo ? (typeof shop.shop_logo === 'string' ? JSON.parse(shop.shop_logo) : shop.shop_logo) : [];
+            // Giả sử logo là array string hoặc string url, lấy phần tử đầu
+            const logoUrl = Array.isArray(logoData) ? logoData[0] : (typeof logoData === 'string' ? logoData : null);
+
+            return (
+            <TableRow key={shop.id}>
+              <TableCell>
+                <User
+                  avatarProps={{ src: logoUrl, fallback: "SH" }}
+                  description={shop.seller_id}
+                  name={shop.shop_name || "Unknown Shop"}
+                />
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                    <StarIcon size={16} className="text-warning fill-warning" />
+                    <span className="font-bold">{shop.shop_rating?.toFixed(1) || "N/A"}</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Chip size="sm" variant="flat" color="primary">
+                    {formatCompactNumber(Number(shop.followers_count || 0))}
+                </Chip>
+              </TableCell>
+              <TableCell>{new Intl.NumberFormat('vi-VN').format(shop.on_sell_product_count || 0)}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1 text-default-500">
+                    <MapPinIcon size={14} />
+                    <span className="text-small">{shop.region || "N/A"}</span>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
 };
 
 ================
@@ -1231,6 +2099,24 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 export const prisma = globalForPrisma.prisma || new PrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+================
+File: lib/utils.ts
+================
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function serializeData(data: any): any {
+  return JSON.parse(
+    JSON.stringify(data, (key, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  );
+}
 
 ================
 File: public/next.svg
@@ -1498,101 +2384,6 @@ const nextConfig = {};
 module.exports = nextConfig;
 
 ================
-File: package.json
-================
-{
-  "name": "next-app-template",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint --fix"
-  },
-  "dependencies": {
-    "@heroui/accordion": "2.2.24",
-    "@heroui/alert": "2.2.27",
-    "@heroui/autocomplete": "2.3.29",
-    "@heroui/avatar": "2.2.22",
-    "@heroui/badge": "2.2.17",
-    "@heroui/button": "2.2.27",
-    "@heroui/card": "2.2.25",
-    "@heroui/chip": "2.2.22",
-    "@heroui/code": "2.2.21",
-    "@heroui/divider": "2.2.20",
-    "@heroui/drawer": "2.2.24",
-    "@heroui/dropdown": "2.3.27",
-    "@heroui/form": "2.1.27",
-    "@heroui/framer-utils": "2.1.23",
-    "@heroui/image": "2.2.17",
-    "@heroui/input": "2.4.28",
-    "@heroui/kbd": "2.2.22",
-    "@heroui/link": "2.2.23",
-    "@heroui/listbox": "2.3.26",
-    "@heroui/modal": "2.2.24",
-    "@heroui/navbar": "2.2.25",
-    "@heroui/pagination": "2.2.24",
-    "@heroui/popover": "2.3.27",
-    "@heroui/progress": "2.2.22",
-    "@heroui/radio": "2.3.27",
-    "@heroui/react-utils": "2.1.14",
-    "@heroui/scroll-shadow": "2.3.18",
-    "@heroui/select": "2.4.28",
-    "@heroui/skeleton": "2.2.17",
-    "@heroui/snippet": "2.2.28",
-    "@heroui/spacer": "2.2.21",
-    "@heroui/spinner": "2.2.24",
-    "@heroui/switch": "2.2.24",
-    "@heroui/system": "2.4.23",
-    "@heroui/table": "2.2.27",
-    "@heroui/tabs": "2.2.24",
-    "@heroui/theme": "2.4.23",
-    "@heroui/toast": "2.0.17",
-    "@heroui/tooltip": "2.2.24",
-    "@heroui/user": "2.2.22",
-    "@prisma/client": "5.14.0",
-    "@react-aria/ssr": "3.9.10",
-    "@react-aria/visually-hidden": "3.8.28",
-    "clsx": "2.1.1",
-    "framer-motion": "11.18.2",
-    "intl-messageformat": "10.7.16",
-    "lucide-react": "^0.554.0",
-    "next": "15.3.1",
-    "next-themes": "0.4.6",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "devDependencies": {
-    "@next/eslint-plugin-next": "15.3.4",
-    "@react-types/shared": "3.32.1",
-    "@tailwindcss/postcss": "4.1.11",
-    "@types/node": "20.5.7",
-    "@types/react": "18.3.3",
-    "@types/react-dom": "18.3.0",
-    "@typescript-eslint/eslint-plugin": "8.34.1",
-    "@typescript-eslint/parser": "8.34.1",
-    "eslint": "9.25.1",
-    "eslint-config-next": "15.3.4",
-    "eslint-config-prettier": "9.1.0",
-    "eslint-plugin-import": "2.31.0",
-    "eslint-plugin-jsx-a11y": "6.10.2",
-    "eslint-plugin-node": "11.1.0",
-    "eslint-plugin-prettier": "5.2.1",
-    "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "5.2.0",
-    "eslint-plugin-unused-imports": "4.1.4",
-    "globals": "16.0.0",
-    "postcss": "8.5.6",
-    "prettier": "3.5.3",
-    "prisma": "5.14.0",
-    "tailwind-variants": "3.1.1",
-    "tailwindcss": "4.1.11",
-    "typescript": "5.6.3"
-  }
-}
-
-================
 File: postcss.config.js
 ================
 module.exports = {
@@ -1735,6 +2526,371 @@ File: tsconfig.json
 }
 
 ================
+File: app/actions/sources.ts
+================
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+
+export async function createSource(formData: FormData) {
+  const source_name = formData.get("source_name") as string;
+  const base_url = formData.get("base_url") as string;
+  const is_active = formData.get("is_active") !== null; 
+
+  if (!source_name || !base_url) {
+    return { error: "Name and URL are required" };
+  }
+
+  try {
+    await prisma.source_config.create({
+      data: {
+        source_name,
+        base_url,
+        is_active,
+        last_crawl_status: "PENDING",
+      },
+    });
+
+    revalidatePath("/sources");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Create source error:", error);
+    return { error: "Failed to create source. URL might be duplicate." };
+  }
+}
+
+export async function deleteSource(id: number) {
+  try {
+    await prisma.source_config.delete({
+      where: { id },
+    });
+    revalidatePath("/sources");
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to delete source" };
+  }
+}
+
+export async function updateSource(id: number, formData: FormData) {
+  const source_name = formData.get("source_name") as string;
+  const base_url = formData.get("base_url") as string;
+  const is_active = formData.get("is_active") !== null;
+
+  if (!source_name || !base_url) {
+    return { error: "Name and URL are required" };
+  }
+
+  try {
+    await prisma.source_config.update({
+      where: { id },
+      data: {
+        source_name,
+        base_url,
+        is_active,
+      },
+    });
+
+    revalidatePath("/sources");
+    return { success: true };
+  } catch (error) {
+    console.error("Update source error:", error);
+    return { error: "Failed to update source." };
+  }
+}
+export async function triggerCrawl(sourceId: number) {
+  try {
+    await prisma.source_config.update({
+      where: { id: sourceId },
+      data: {
+        is_active: true,    
+        last_crawl_status: null, 
+        updated_at: new Date(), 
+      },
+    });
+
+    revalidatePath("/sources");
+    return { success: true };
+  } catch (error) {
+    console.error("Trigger crawl error:", error);
+    return { error: "Failed to reset source status for crawling." };
+  }
+}
+
+================
+File: app/products/page.tsx
+================
+import { prisma } from "@/lib/prisma";
+import { BaseProductsTable } from "@/components/base-products-table";
+import SearchInput from "@/components/search-input";
+import { serializeData } from "@/lib/utils";
+
+const ITEMS_PER_PAGE = 10;
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const query = params?.query || "";
+  const page = Number(params?.page) || 1;
+  const skip = (page - 1) * ITEMS_PER_PAGE;
+
+  const whereCondition = query
+    ? {
+        OR: [
+          { title: { contains: query, mode: "insensitive" as const } },
+          { product_id: { contains: query, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const [products, totalCount] = await prisma.$transaction([
+    prisma.tbl_base_products.findMany({
+      where: whereCondition,
+      skip,
+      take: ITEMS_PER_PAGE,
+      orderBy: { load_timestamp: "desc" },
+    }),
+    prisma.tbl_base_products.count({ where: whereCondition }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const serializedProducts = serializeData(products);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Cleaned Products (Staging)</h1>
+        <SearchInput placeholder="Search by name or ID..." />
+      </div>
+      <BaseProductsTable products={serializedProducts} totalPages={totalPages} />
+    </div>
+  );
+}
+
+================
+File: app/page.tsx
+================
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { DatabaseIcon, AlertCircleIcon, PackageIcon } from "lucide-react";
+import { prisma } from "@/lib/prisma";
+import { serializeData } from "@/lib/utils";
+import { DashboardChart } from "@/components/dashboard-chart";
+import { RecentLogsTable } from "@/components/recent-logs-table"; 
+
+async function getDashboardStats() {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const [activeSources, totalProducts, failedJobsToday, recentLogs] = await prisma.$transaction([
+    prisma.source_config.count({ where: { is_active: true } }),
+    
+    prisma.tbl_products_raw.count(),
+    
+    prisma.crawled_files_log.count({
+      where: { status: "FAILED", created_at: { gte: startOfToday } }
+    }),
+
+    prisma.crawled_files_log.findMany({
+      take: 5,
+      orderBy: { created_at: "desc" },
+      include: { source_config: true }
+    })
+  ]);
+  const chartRawData: any[] = await prisma.$queryRaw`
+    SELECT 
+      TO_CHAR(load_timestamp, 'DD/MM') as date, 
+      COUNT(*)::int as count 
+    FROM "staging"."tbl_products_raw"
+    WHERE load_timestamp >= NOW() - INTERVAL '7 days'
+    GROUP BY TO_CHAR(load_timestamp, 'DD/MM'), DATE(load_timestamp)
+    ORDER BY DATE(load_timestamp) ASC
+  `;
+
+  return {
+    activeSources,
+    totalProducts,
+    failedJobsToday,
+    recentLogs: serializeData(recentLogs),
+    chartData: chartRawData 
+  };
+}
+
+export default async function Dashboard() {
+  const stats = await getDashboardStats();
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatsCard 
+          title="Active Sources" 
+          value={stats.activeSources} 
+          icon={<DatabaseIcon className="text-primary" size={24} />} 
+        />
+        <StatsCard 
+          title="Raw Products" 
+          value={new Intl.NumberFormat('vi-VN').format(stats.totalProducts)} 
+          icon={<PackageIcon className="text-success" size={24} />} 
+        />
+        <StatsCard 
+          title="Failed Jobs Today" 
+          value={stats.failedJobsToday} 
+          icon={<AlertCircleIcon className="text-danger" size={24} />} 
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        
+        <DashboardChart data={stats.chartData} />
+
+        <Card className="lg:col-span-1 min-h-[400px]">
+          <CardHeader>
+            <h3 className="font-semibold text-lg">Recent Crawl Activity</h3>
+          </CardHeader>
+          <CardBody>
+             <RecentLogsTable logs={stats.recentLogs} />
+          </CardBody>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+const StatsCard = ({ title, value, icon }: any) => (
+  <Card>
+    <CardBody className="flex flex-row items-center gap-4 p-6">
+      <div className="p-3 bg-default-100 rounded-large">
+        {icon}
+      </div>
+      <div>
+        <p className="text-small text-default-500 uppercase font-bold">{title}</p>
+        <h4 className="text-3xl font-bold">{value}</h4>
+      </div>
+    </CardBody>
+  </Card>
+);
+
+================
+File: components/base-products-table.tsx
+================
+"use client";
+
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
+import { User } from "@heroui/user";
+import { Pagination } from "@heroui/pagination";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
+
+export const BaseProductsTable = ({ products, totalPages }: { products: any[], totalPages: number }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPage = Number(searchParams.get("page")) || 1;
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", page.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  return (
+    <Table
+      aria-label="Base products table"
+      bottomContent={
+        totalPages > 1 && (
+          <div className="flex w-full justify-center">
+             <Pagination
+                showControls
+                showShadow
+                color="primary"
+                page={currentPage}
+                total={totalPages}
+                onChange={handlePageChange}
+             />
+          </div>
+        )
+      }
+    >
+      <TableHeader>
+        <TableColumn>PRODUCT</TableColumn>
+        <TableColumn>PRICE</TableColumn>
+        <TableColumn>SOLD</TableColumn>
+        <TableColumn>SELLER</TableColumn>
+        <TableColumn>UPDATED</TableColumn>
+      </TableHeader>
+      <TableBody emptyContent="No products found">
+        {products.map((item) => {
+          // Logic xử lý ảnh an toàn (Vì JSONB có thể trả về string hoặc array tùy driver/data)
+          let images: string[] = [];
+          try {
+            if (Array.isArray(item.images)) {
+                images = item.images;
+            } else if (typeof item.images === 'string') {
+                images = JSON.parse(item.images);
+            }
+          } catch (e) {
+            images = [];
+          }
+          
+          // Lấy ảnh đầu tiên làm avatar
+          const avatarUrl = images.length > 0 ? images[0] : undefined;
+
+          return (
+            <TableRow key={item.id}>
+              <TableCell>
+                {/* Link dẫn đến trang chi tiết Warehouse View */}
+                <Link href={`/products/${encodeURIComponent(item.product_id)}`}>
+                    <div className="cursor-pointer group">
+                        <User
+                            avatarProps={{
+                                radius: "lg",
+                                src: avatarUrl,
+                                fallback: "IMG",
+                                className: "group-hover:scale-105 transition-transform" // Hiệu ứng phóng to ảnh khi hover
+                            }}
+                            description={item.product_id}
+                            name={
+                                <div 
+                                    className="w-[250px] truncate font-medium text-foreground group-hover:text-primary transition-colors" 
+                                    title={item.title}
+                                >
+                                    {item.title}
+                                </div>
+                            }
+                        />
+                    </div>
+                </Link>
+              </TableCell>
+              <TableCell>
+                <div className="font-bold text-success">
+                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price_sale || 0)}
+                </div>
+                {/* Nếu có giá gốc và giá gốc lớn hơn giá bán thì hiển thị gạch ngang */}
+                {item.price_original && Number(item.price_original) > Number(item.price_sale) && (
+                    <div className="text-tiny text-default-400 line-through">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price_original)}
+                    </div>
+                )}
+              </TableCell>
+              <TableCell>{new Intl.NumberFormat('vi-VN').format(item.sold_count || 0)}</TableCell>
+              <TableCell>{item.seller_id}</TableCell>
+              <TableCell className="text-tiny text-default-400">
+                {item.load_timestamp ? new Date(item.load_timestamp).toLocaleDateString('vi-VN') : ''}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+};
+
+================
 File: components/logs-table.tsx
 ================
 "use client";
@@ -1806,6 +2962,155 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
       </TableBody>
     </Table>
   );
+};
+
+================
+File: components/sources-table.tsx
+================
+"use client";
+
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
+import { Chip } from '@heroui/chip';
+import { Tooltip } from '@heroui/tooltip'
+import { EditIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { Pagination } from '@heroui/pagination'
+import { EditSourceModal } from '@/components/edit-source-modal';
+import { deleteSource, triggerCrawl } from '@/app/actions/sources';
+import { useState } from 'react';
+
+interface SourcesTableProps {
+    sources: any[];
+    totalPages: number;
+}
+
+const statusColorMap: Record<string, "success" | "danger" | "warning"> = {
+    SUCCESS: "success",
+    FAILED: "danger",
+    PENDING: "warning",
+};
+
+export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const [triggeringId, setTriggeringId] = useState<number | null>(null); 
+
+    const currentPage = Number(searchParams.get("page")) || 1;
+
+    const formatDate = (date: Date | null) => {
+        if (!date) return "N/A";
+        return new Date(date).toLocaleString('vi-VN');
+    };
+
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams);
+        params.set("page", page.toString());
+        router.push(`${pathname}?${params.toString()}`);
+    };
+    const handleDelete = async (id: number) => {
+        if (confirm("Are you sure you want to delete this source?")) {
+            await deleteSource(id);
+        }
+    };
+
+    const handleTriggerCrawl = async (id: number) => {
+        setTriggeringId(id);
+        const result = await triggerCrawl(id);
+        if (result.error) {
+            alert(result.error);
+        }
+        setTriggeringId(null);
+    };
+
+    return (
+        <Table
+            aria-label="Source configs table"
+            bottomContent={
+                totalPages > 1 ? (
+                    <div className="flex w-full justify-center">
+                        <Pagination
+                            isCompact
+                            showControls
+                            showShadow
+                            color="primary"
+                            page={currentPage}
+                            total={totalPages}
+                            onChange={handlePageChange}
+                        />
+                    </div>
+                ) : null
+            }
+        >
+            <TableHeader>
+                <TableColumn>ID</TableColumn>
+                <TableColumn>SOURCE NAME</TableColumn>
+                <TableColumn>STATUS</TableColumn>
+                <TableColumn>LAST CRAWL</TableColumn>
+                <TableColumn>ACTIONS</TableColumn>
+            </TableHeader>
+            <TableBody emptyContent={"No rows to display."}>
+                {sources.map((source) => (
+                    <TableRow key={source.id}>
+                        <TableCell>#{source.id}</TableCell>
+                        <TableCell>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-sm">{source.source_name}</span>
+                                <span className="text-tiny text-default-400 truncate max-w-[200px]">
+                                    {source.base_url}
+                                </span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <Chip
+                                className="capitalize"
+                                color={source.is_active ? "success" : "default"}
+                                size="sm"
+                                variant="flat"
+                            >
+                                {source.is_active ? "Active" : "Inactive"}
+                            </Chip>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex flex-col gap-1">
+                                <Chip
+                                    size="sm"
+                                    color={statusColorMap[source.last_crawl_status || "PENDING"] || "default"}
+                                    variant="dot"
+                                >
+                                    {source.last_crawl_status || "N/A"}
+                                </Chip>
+                                <span className="text-tiny text-default-400">
+                                    {formatDate(source.last_crawl_timestamp)}
+                                </span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-2">
+                                <EditSourceModal source={source} />
+                                <Tooltip color="danger" content="Delete source">
+                                    <span
+                                        className="text-lg text-danger cursor-pointer active:opacity-50 hover:opacity-100"
+                                        onClick={() => handleDelete(source.id)}
+                                    >
+                                        <TrashIcon size={18} />
+                                    </span>
+                                </Tooltip>
+                                <Tooltip content="Trigger Crawl">
+                                    <span 
+                                        className={`text-lg text-primary cursor-pointer active:opacity-50 hover:opacity-100 ${triggeringId === source.id ? 'animate-spin opacity-50 cursor-not-allowed' : ''}`}
+                                        onClick={() => triggeringId !== source.id && handleTriggerCrawl(source.id)}
+                                    >
+                                        <RefreshCwIcon size={18} />
+                                    </span>
+                                </Tooltip>
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    );
 };
 
 ================
@@ -2155,6 +3460,105 @@ export default async function LogsPage({
 }
 
 ================
+File: package.json
+================
+{
+  "name": "next-app-template",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint --fix"
+  },
+  "dependencies": {
+    "@heroui/accordion": "2.2.24",
+    "@heroui/alert": "2.2.27",
+    "@heroui/autocomplete": "2.3.29",
+    "@heroui/avatar": "2.2.22",
+    "@heroui/badge": "2.2.17",
+    "@heroui/button": "2.2.27",
+    "@heroui/card": "2.2.25",
+    "@heroui/chip": "2.2.22",
+    "@heroui/code": "2.2.21",
+    "@heroui/divider": "2.2.20",
+    "@heroui/drawer": "2.2.24",
+    "@heroui/dropdown": "2.3.27",
+    "@heroui/form": "2.1.27",
+    "@heroui/framer-utils": "2.1.23",
+    "@heroui/image": "2.2.17",
+    "@heroui/input": "2.4.28",
+    "@heroui/kbd": "2.2.22",
+    "@heroui/link": "2.2.23",
+    "@heroui/listbox": "2.3.26",
+    "@heroui/modal": "2.2.24",
+    "@heroui/navbar": "2.2.25",
+    "@heroui/pagination": "2.2.24",
+    "@heroui/popover": "2.3.27",
+    "@heroui/progress": "2.2.22",
+    "@heroui/radio": "2.3.27",
+    "@heroui/react-utils": "2.1.14",
+    "@heroui/scroll-shadow": "2.3.18",
+    "@heroui/select": "2.4.28",
+    "@heroui/skeleton": "2.2.17",
+    "@heroui/snippet": "2.2.28",
+    "@heroui/spacer": "2.2.21",
+    "@heroui/spinner": "2.2.24",
+    "@heroui/switch": "2.2.24",
+    "@heroui/system": "2.4.23",
+    "@heroui/table": "2.2.27",
+    "@heroui/tabs": "2.2.24",
+    "@heroui/theme": "2.4.23",
+    "@heroui/toast": "2.0.17",
+    "@heroui/tooltip": "2.2.24",
+    "@heroui/user": "2.2.22",
+    "@prisma/client": "5.14.0",
+    "@react-aria/ssr": "3.9.10",
+    "@react-aria/visually-hidden": "3.8.28",
+    "clsx": "2.1.1",
+    "framer-motion": "11.18.2",
+    "intl-messageformat": "10.7.16",
+    "lucide-react": "^0.554.0",
+    "next": "15.3.1",
+    "next-themes": "0.4.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-json-view": "^1.21.3",
+    "recharts": "^3.5.0",
+    "tailwind-merge": "^3.4.0",
+    "use-debounce": "^10.0.6"
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "15.3.4",
+    "@react-types/shared": "3.32.1",
+    "@tailwindcss/postcss": "4.1.11",
+    "@types/node": "20.5.7",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "@typescript-eslint/eslint-plugin": "8.34.1",
+    "@typescript-eslint/parser": "8.34.1",
+    "eslint": "9.25.1",
+    "eslint-config-next": "15.3.4",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-prettier": "5.2.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-unused-imports": "4.1.4",
+    "globals": "16.0.0",
+    "postcss": "8.5.6",
+    "prettier": "3.5.3",
+    "prisma": "5.14.0",
+    "tailwind-variants": "3.1.1",
+    "tailwindcss": "4.1.11",
+    "typescript": "5.6.3"
+  }
+}
+
+================
 File: app/sources/page.tsx
 ================
 import { prisma } from "@/lib/prisma";
@@ -2196,6 +3600,153 @@ export default async function SourcesPage({
         </div>
     );
 }
+
+================
+File: components/sidebar.tsx
+================
+"use client";
+
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { Accordion, AccordionItem } from "@heroui/accordion";
+import {
+  HomeIcon,
+  DatabaseIcon,
+  FileTextIcon,
+  SettingsIcon,
+  LayersIcon,
+  BarChart3Icon,
+  StoreIcon,
+  ServerIcon,
+  PackageSearchIcon,
+  ActivityIcon,
+  MessageSquareIcon
+} from "lucide-react";
+import { ThemeSwitch } from "./theme-switch";
+
+// Định nghĩa cấu trúc Menu
+const menuGroups = [
+  {
+    key: "monitoring",
+    title: "Monitoring",
+    icon: ActivityIcon,
+    items: [
+      { name: "Dashboard", href: "/", icon: HomeIcon },
+      { name: "Crawl Logs", href: "/logs", icon: FileTextIcon },
+    ]
+  },
+  {
+    key: "controller",
+    title: "Controller",
+    icon: SettingsIcon,
+    items: [
+      { name: "Source Configs", href: "/sources", icon: ServerIcon },
+    ]
+  },
+  {
+    key: "staging",
+    title: "Staging Data",
+    icon: DatabaseIcon,
+    items: [
+      { name: "Raw Data", href: "/raw-data", icon: DatabaseIcon },
+      { name: "Cleaned Products", href: "/products", icon: PackageSearchIcon },
+      { name: "Shops Directory", href: "/shops", icon: StoreIcon },
+    ]
+  },
+  {
+    key: "warehouse",
+    title: "Warehouse",
+    icon: LayersIcon,
+    items: [
+      { name: "Analytics", href: "/analytics", icon: BarChart3Icon },
+      { name: "Reviews", href: "/reviews", icon: MessageSquareIcon }
+    ]
+  }
+];
+
+export const Sidebar = () => {
+  const pathname = usePathname();
+
+  // Logic để xác định Group nào đang Active dựa trên URL hiện tại
+  // Để tự động mở Dropdown khi reload trang
+  const defaultExpandedKeys = menuGroups
+    .filter(group => group.items.some(item => item.href === pathname))
+    .map(group => group.key);
+
+  // Nếu đang ở trang chủ /, mặc định mở nhóm Monitoring
+  if (pathname === "/" && !defaultExpandedKeys.includes("monitoring")) {
+    defaultExpandedKeys.push("monitoring");
+  }
+
+  return (
+    <div className="w-64 h-screen bg-content1 border-r border-divider flex flex-col fixed left-0 top-0 z-50">
+      {/* Header */}
+      <div className="h-16 flex items-center px-6 border-b border-divider gap-2">
+        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-lg">D</span>
+        </div>
+        <span className="text-xl font-bold text-foreground">DW Admin</span>
+      </div>
+
+      {/* Navigation (Scrollable) */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2">
+        <Accordion 
+          selectionMode="multiple" 
+          defaultExpandedKeys={defaultExpandedKeys}
+          itemClasses={{
+            base: "px-0",
+            title: "font-semibold text-default-600",
+            trigger: "px-2 py-0 data-[hover=true]:bg-default-100 rounded-lg h-12 flex items-center",
+            indicator: "text-medium",
+            content: "text-small px-2",
+          }}
+          showDivider={false}
+        >
+          {menuGroups.map((group) => (
+            <AccordionItem 
+              key={group.key} 
+              aria-label={group.title} 
+              title={group.title}
+              startContent={<group.icon size={20} className="text-default-500" />}
+            >
+              <ul className="flex flex-col gap-1 pb-2">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-medium transition-colors ${
+                          isActive
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-default-500 hover:bg-default-100 hover:text-foreground"
+                        }`}
+                      >
+                        <item.icon size={18} />
+                        <span>{item.name}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </nav>
+
+      {/* Footer (Theme Switch) */}
+      <div className="p-4 border-t border-divider">
+        <div className="flex items-center justify-between bg-default-50 p-3 rounded-xl">
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-foreground">Betodemy DW</span>
+            <span className="text-[10px] text-default-500">v1.2.0 (Pro)</span>
+          </div>
+          <ThemeSwitch />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 
