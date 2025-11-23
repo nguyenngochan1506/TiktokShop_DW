@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { Button } from "@heroui/button";
-import { PlusIcon } from "lucide-react";
-import { SourcesTable } from "./sources-table";
 import { CreateSourceModal } from "@/components/create-source-modal";
+import { SourcesTable } from "@/components/sources-table";
 
 const ITEMS_PER_PAGE = 10;
 

@@ -6,8 +6,8 @@ import { Tooltip } from '@heroui/tooltip'
 import { EditIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Pagination } from '@heroui/pagination'
-import { deleteSource } from '../actions/sources';
 import { EditSourceModal } from '@/components/edit-source-modal';
+import { deleteSource } from '@/app/actions/sources';
 
 interface SourcesTableProps {
     sources: any[];
