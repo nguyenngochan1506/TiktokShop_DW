@@ -4,6 +4,7 @@ import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from 
 import { User } from "@heroui/user";
 import { Pagination } from "@heroui/pagination";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export const BaseProductsTable = ({ products, totalPages }: { products: any[], totalPages: number }) => {
   const router = useRouter();
@@ -18,12 +19,19 @@ export const BaseProductsTable = ({ products, totalPages }: { products: any[], t
   };
 
   return (
-    <Table 
+    <Table
       aria-label="Base products table"
       bottomContent={
         totalPages > 1 && (
           <div className="flex w-full justify-center">
-             <Pagination showControls page={currentPage} total={totalPages} onChange={handlePageChange} />
+             <Pagination
+                showControls
+                showShadow
+                color="primary"
+                page={currentPage}
+                total={totalPages}
+                onChange={handlePageChange}
+             />
           </div>
         )
       }
@@ -37,28 +45,53 @@ export const BaseProductsTable = ({ products, totalPages }: { products: any[], t
       </TableHeader>
       <TableBody emptyContent="No products found">
         {products.map((item) => {
-          // Xử lý hiển thị ảnh từ JSON images
-          const images = item.images ? (typeof item.images === 'string' ? JSON.parse(item.images) : item.images) : [];
-          const avatarUrl = images.length > 0 ? images[0] : null;
+          // Logic xử lý ảnh an toàn (Vì JSONB có thể trả về string hoặc array tùy driver/data)
+          let images: string[] = [];
+          try {
+            if (Array.isArray(item.images)) {
+                images = item.images;
+            } else if (typeof item.images === 'string') {
+                images = JSON.parse(item.images);
+            }
+          } catch (e) {
+            images = [];
+          }
+          
+          // Lấy ảnh đầu tiên làm avatar
+          const avatarUrl = images.length > 0 ? images[0] : undefined;
 
           return (
             <TableRow key={item.id}>
               <TableCell>
-                <User
-                  avatarProps={{ radius: "lg", src: avatarUrl, fallback: "IMG" }}
-                  description={item.product_id}
-                  name={
-                    <div className="w-[200px] truncate" title={item.title}>
-                        {item.title}
+                {/* Link dẫn đến trang chi tiết Warehouse View */}
+                <Link href={`/products/${encodeURIComponent(item.product_id)}`}>
+                    <div className="cursor-pointer group">
+                        <User
+                            avatarProps={{
+                                radius: "lg",
+                                src: avatarUrl,
+                                fallback: "IMG",
+                                className: "group-hover:scale-105 transition-transform" // Hiệu ứng phóng to ảnh khi hover
+                            }}
+                            description={item.product_id}
+                            name={
+                                <div 
+                                    className="w-[250px] truncate font-medium text-foreground group-hover:text-primary transition-colors" 
+                                    title={item.title}
+                                >
+                                    {item.title}
+                                </div>
+                            }
+                        />
                     </div>
-                  }
-                />
+                </Link>
               </TableCell>
               <TableCell>
                 <div className="font-bold text-success">
                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price_sale || 0)}
                 </div>
-                {item.price_original && (
+                {/* Nếu có giá gốc và giá gốc lớn hơn giá bán thì hiển thị gạch ngang */}
+                {item.price_original && Number(item.price_original) > Number(item.price_sale) && (
                     <div className="text-tiny text-default-400 line-through">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price_original)}
                     </div>
