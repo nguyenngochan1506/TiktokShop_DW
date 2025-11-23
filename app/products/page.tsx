@@ -1,39 +1,49 @@
-"use client";
+import { prisma } from "@/lib/prisma";
+import { BaseProductsTable } from "@/components/base-products-table";
+import SearchInput from "@/components/search-input";
+import { serializeData } from "@/lib/utils";
 
+const ITEMS_PER_PAGE = 10;
 
-import {Table, TableHeader, TableColumn, TableBody, TableRow, TableCell} from '@heroui/table';
-// Mock mapping DB fields
-const products = [
-  { id: "1", product_id: "SP001", title: "iPhone 15 Pro Max", price_sale: 29990000, sold_count: 120, seller_id: "SHOP_APPLE" },
-  { id: "2", product_id: "SP002", title: "Samsung S24 Ultra", price_sale: 25000000, sold_count: 50, seller_id: "SHOP_SAMSUNG" },
-];
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const query = params?.query || "";
+  const page = Number(params?.page) || 1;
+  const skip = (page - 1) * ITEMS_PER_PAGE;
 
-export default function ProductsPage() {
+  const whereCondition = query
+    ? {
+        OR: [
+          { title: { contains: query, mode: "insensitive" as const } },
+          { product_id: { contains: query, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const [products, totalCount] = await prisma.$transaction([
+    prisma.tbl_base_products.findMany({
+      where: whereCondition,
+      skip,
+      take: ITEMS_PER_PAGE,
+      orderBy: { load_timestamp: "desc" },
+    }),
+    prisma.tbl_base_products.count({ where: whereCondition }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const serializedProducts = serializeData(products);
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Base Products</h1>
-      <Table aria-label="Products table">
-        <TableHeader>
-          <TableColumn>PRODUCT ID</TableColumn>
-          <TableColumn>TITLE</TableColumn>
-          <TableColumn>PRICE</TableColumn>
-          <TableColumn>SOLD</TableColumn>
-          <TableColumn>SELLER</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {products.map((p) => (
-            <TableRow key={p.id}>
-              <TableCell>{p.product_id}</TableCell>
-              <TableCell className="max-w-xs truncate">{p.title}</TableCell>
-              <TableCell>
-                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.price_sale)}
-              </TableCell>
-              <TableCell>{p.sold_count}</TableCell>
-              <TableCell>{p.seller_id}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Cleaned Products (Staging)</h1>
+        <SearchInput placeholder="Search by name or ID..." />
+      </div>
+      <BaseProductsTable products={serializedProducts} totalPages={totalPages} />
     </div>
   );
 }
