@@ -14,7 +14,9 @@ import {
   ServerIcon,
   PackageSearchIcon,
   ActivityIcon,
-  MessageSquareIcon
+  MessageSquareIcon,
+  TerminalIcon,
+  ShieldCheckIcon
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
 
@@ -55,7 +57,15 @@ const menuGroups = [
       { name: "Analytics", href: "/analytics", icon: BarChart3Icon },
       { name: "Reviews", href: "/reviews", icon: MessageSquareIcon }
     ]
-  }
+  },{
+    key: "tools",
+    title: "Engineering Tools",
+    icon: SettingsIcon, 
+    items: [
+      { name: "SQL Playground", href: "/playground", icon: TerminalIcon }, // Import TerminalIcon từ lucide-react
+      { name: "Data Quality", href: "/data-quality", icon: ShieldCheckIcon }, // Import ShieldCheckIcon
+    ]
+  },
 ];
 
 export const Sidebar = () => {
