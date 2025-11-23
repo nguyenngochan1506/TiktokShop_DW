@@ -354,18 +354,26 @@ export default function SqlPlaygroundPage() {
                 )}
 
                 {/* Result Table */}
-                <Card className="flex-1 overflow-hidden min-h-[100px]">
-                    <CardBody className="p-0 h-full">
+                 <Card className="flex-1 w-full overflow-hidden min-h-[100px]">
+                    {/* Thêm overflow-auto vào CardBody để cuộn nội dung bên trong Card */}
+                    <CardBody className="p-0 h-full overflow-auto scrollbar-hide">
                         {result.length > 0 ? (
                             <Table
                                 aria-label="Kết Quả Truy Vấn"
                                 isHeaderSticky
-                                classNames={{ base: "h-full overflow-auto", table: "h-full" }}
                                 removeWrapper
+                                classNames={{
+                                    // Bỏ h-full ở base để tránh xung đột chiều cao khi scroll ngang
+                                    base: "min-w-full",
+                                    table: "min-w-full",
+                                }}
                             >
                                 <TableHeader>
                                     {columns.map((col) => (
-                                        <TableColumn key={col}>{col.toUpperCase()}</TableColumn>
+                                        <TableColumn key={col} className="whitespace-nowrap">
+                                            {/* Thêm whitespace-nowrap để tên cột không bị xuống dòng */}
+                                            {col.toUpperCase()}
+                                        </TableColumn>
                                     ))}
                                 </TableHeader>
                                 <TableBody>

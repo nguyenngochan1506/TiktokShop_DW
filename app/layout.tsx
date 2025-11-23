@@ -3,6 +3,8 @@ import { Metadata } from "next";
 import { Providers } from "./providers";
 import { fontSans, fontMono } from "@/config/fonts";
 import { Sidebar } from "@/components/sidebar";
+import { SidebarProvider } from "@/components/sidebar-context"; // Import 1
+import { MainLayout } from "@/components/main-layout"; // Import 2
 import clsx from "clsx";
 
 export const metadata: Metadata = {
@@ -25,15 +27,18 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <div className="flex min-h-screen">
-            {/* Sidebar cố định */}
-            <Sidebar />
-            
-            {/* Nội dung chính bên phải */}
-            <main className="flex-1 ml-64 p-8 bg-background">
-              {children}
-            </main>
-          </div>
+          {/* Bọc toàn bộ app trong SidebarProvider */}
+          <SidebarProvider>
+            <div className="flex min-h-screen">
+              
+              <Sidebar />
+              
+              <MainLayout>
+                {children}
+              </MainLayout>
+              
+            </div>
+          </SidebarProvider>
         </Providers>
       </body>
     </html>

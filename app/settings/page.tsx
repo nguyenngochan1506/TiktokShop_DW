@@ -1,4 +1,5 @@
 import { getAllSettings } from "@/app/actions/settings";
+import MaintenancePanel from "@/components/maintenance-panel";
 import SettingsEditor from "@/components/settings-editor";
 
 export default async function SettingsPage() {
@@ -16,6 +17,7 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Cấu Hình Hệ Thống</h1>
       <SettingsEditor settings={result.data} />
+      <MaintenancePanel />
     </div>
   );
 }

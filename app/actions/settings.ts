@@ -77,3 +77,31 @@ export async function getConfig<T>(key: string, defaultValue: T): Promise<T> {
   
   return setting.value as T;
 }
+
+export async function purgeOldData(retentionDays: number, target: 'RAW' | 'LOGS') {
+  try {
+    const dateThreshold = new Date();
+    dateThreshold.setDate(dateThreshold.getDate() - retentionDays);
+
+    let deletedCount = 0;
+
+    if (target === 'RAW') {
+      const res = await prisma.tbl_products_raw.deleteMany({
+        where: { load_timestamp: { lt: dateThreshold } }
+      });
+      deletedCount = res.count;
+    } 
+    else if (target === 'LOGS') {
+      const res = await prisma.crawled_files_log.deleteMany({
+        where: { created_at: { lt: dateThreshold } }
+      });
+      deletedCount = res.count;
+    }
+
+    revalidatePath("/system-health");
+    return { success: true, count: deletedCount };
+  } catch (error) {
+    console.error("Purge error:", error);
+    return { error: "Failed to purge data" };
+  }
+}

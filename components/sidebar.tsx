@@ -17,10 +17,15 @@ import {
   MessageSquareIcon,
   TerminalIcon,
   ShieldCheckIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  PanelLeftClose
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
 import { CommandPalette } from "./command-palette";
+import { useSidebar } from "./sidebar-context";
+import clsx from "clsx";
+import { Tooltip } from "@heroui/tooltip";
+import { Button } from "@heroui/button";
 
 // Định nghĩa cấu trúc Menu
 const menuGroups = [
@@ -59,10 +64,10 @@ const menuGroups = [
       { name: "Phân Tích Bán Hàng", href: "/analytics", icon: BarChart3Icon },
       { name: "Đánh Giá Khách Hàng", href: "/reviews", icon: MessageSquareIcon }
     ]
-  },{
+  }, {
     key: "tools",
     title: "Tools",
-    icon: SettingsIcon, 
+    icon: SettingsIcon,
     items: [
       { name: "SQL Sandbox", href: "/playground", icon: TerminalIcon },
       { name: "Chất Lượng Dữ Liệu", href: "/data-quality", icon: ShieldCheckIcon },
@@ -75,6 +80,7 @@ const menuGroups = [
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const { isOpen, toggleSidebar } = useSidebar();
 
   // Logic để xác định Group nào đang Active dựa trên URL hiện tại
   // Để tự động mở Dropdown khi reload trang
@@ -88,22 +94,41 @@ export const Sidebar = () => {
   }
 
   return (
-    <div className="w-64 h-screen bg-content1 border-r border-divider flex flex-col fixed left-0 top-0 z-50 font-sans">
+    <aside
+      className={clsx(
+        "h-screen bg-content1 border-r border-divider flex flex-col fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out",
+        // Logic ẩn hiện: Nếu đóng thì dịch sang trái (-translate-x-full)
+        isOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full"
+      )}
+    >
       {/* Header */}
-      <div className="h-16 flex items-center px-6 border-b border-divider gap-2">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+      <div className="h-16 flex items-center px-6 border-b border-divider gap-2 justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-lg">D</span>
+          </div>
+          <span className="text-xl font-bold text-foreground">DW Admin</span>
         </div>
-        <span className="text-xl font-bold text-foreground">DW Admin</span>
+        <Tooltip content="Thu gọn Menu">
+          <Button
+            isIconOnly
+            variant="light"
+            size="sm"
+            onPress={toggleSidebar}
+            className="text-default-500 hover:text-foreground"
+          >
+            <PanelLeftClose size={24} />
+          </Button>
+        </Tooltip>
       </div>
-         <div className="px-4 py-4">
+      <div className="px-4 py-4">
         <CommandPalette />
       </div>
 
       {/* Navigation (Scrollable) */}
       <nav className="flex-1 overflow-y-auto py-4 px-2">
-        <Accordion 
-          selectionMode="multiple" 
+        <Accordion
+          selectionMode="multiple"
           defaultExpandedKeys={defaultExpandedKeys}
           itemClasses={{
             base: "px-0",
@@ -115,9 +140,9 @@ export const Sidebar = () => {
           showDivider={false}
         >
           {menuGroups.map((group) => (
-            <AccordionItem 
-              key={group.key} 
-              aria-label={group.title} 
+            <AccordionItem
+              key={group.key}
+              aria-label={group.title}
               title={group.title}
               startContent={<group.icon size={20} className="text-default-500" />}
             >
@@ -128,11 +153,10 @@ export const Sidebar = () => {
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-medium transition-colors ${
-                          isActive
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "text-default-500 hover:bg-default-100 hover:text-foreground"
-                        }`}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-medium transition-colors ${isActive
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-default-500 hover:bg-default-100 hover:text-foreground"
+                          }`}
                       >
                         <item.icon size={18} />
                         <span>{item.name}</span>
@@ -156,6 +180,6 @@ export const Sidebar = () => {
           <ThemeSwitch />
         </div>
       </div>
-    </div>
+    </aside>
   );
 };
