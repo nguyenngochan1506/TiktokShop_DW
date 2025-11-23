@@ -66,7 +66,8 @@ const menuGroups = [
       { name: "SQL Playground", href: "/playground", icon: TerminalIcon },
       { name: "Data Quality", href: "/data-quality", icon: ShieldCheckIcon },
       { name: "System Health", href: "/system-health", icon: ActivityIcon },
-      { name: "Dictionary", href: "/dictionary", icon: BookOpenIcon }
+      { name: "Dictionary", href: "/dictionary", icon: BookOpenIcon },
+      { name: "System Settings", href: "/settings", icon: SettingsIcon }
     ]
   },
 ];

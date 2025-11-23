@@ -278,3 +278,14 @@ model data_dictionary_notes {
   @@unique([schema_name, table_name, column_name], map: "uq_dictionary_col")
   @@schema("controller")
 }
+
+model system_settings {
+  key         String   @id @db.VarChar(100)
+  value       String   
+  type        String   @default("string") @db.VarChar(20)
+  group       String   @db.VarChar(50) // 'DATA_QUALITY', 'CRAWLER', 'GENERAL'
+  description String?  
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@schema("controller")
+}
