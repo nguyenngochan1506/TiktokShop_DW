@@ -7,7 +7,8 @@ import { EditIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Pagination } from '@heroui/pagination'
 import { EditSourceModal } from '@/components/edit-source-modal';
-import { deleteSource } from '@/app/actions/sources';
+import { deleteSource, triggerCrawl } from '@/app/actions/sources';
+import { useState } from 'react';
 
 interface SourcesTableProps {
     sources: any[];
@@ -24,6 +25,7 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const [triggeringId, setTriggeringId] = useState<number | null>(null); 
 
     const currentPage = Number(searchParams.get("page")) || 1;
 
@@ -41,6 +43,15 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
         if (confirm("Are you sure you want to delete this source?")) {
             await deleteSource(id);
         }
+    };
+
+    const handleTriggerCrawl = async (id: number) => {
+        setTriggeringId(id);
+        const result = await triggerCrawl(id);
+        if (result.error) {
+            alert(result.error);
+        }
+        setTriggeringId(null);
     };
 
     return (
@@ -117,7 +128,10 @@ export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
                                     </span>
                                 </Tooltip>
                                 <Tooltip content="Trigger Crawl">
-                                    <span className="text-lg text-primary cursor-pointer active:opacity-50 hover:opacity-100">
+                                    <span 
+                                        className={`text-lg text-primary cursor-pointer active:opacity-50 hover:opacity-100 ${triggeringId === source.id ? 'animate-spin opacity-50 cursor-not-allowed' : ''}`}
+                                        onClick={() => triggeringId !== source.id && handleTriggerCrawl(source.id)}
+                                    >
                                         <RefreshCwIcon size={18} />
                                     </span>
                                 </Tooltip>

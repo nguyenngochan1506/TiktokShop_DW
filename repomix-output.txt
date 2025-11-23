@@ -1,0 +1,2206 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+
+================================================================
+Directory Structure
+================================================================
+app/
+  actions/
+    sources.ts
+  logs/
+    page.tsx
+  products/
+    page.tsx
+  sources/
+    page.tsx
+  error.tsx
+  layout.tsx
+  page.tsx
+  providers.tsx
+components/
+  counter.tsx
+  create-source-modal.tsx
+  edit-source-modal.tsx
+  icons.tsx
+  logs-table.tsx
+  primitives.ts
+  sidebar.tsx
+  sources-table.tsx
+  theme-switch.tsx
+config/
+  fonts.ts
+  site.ts
+lib/
+  prisma.ts
+prisma/
+  schema.prisma
+public/
+  favicon.ico
+  next.svg
+  vercel.svg
+styles/
+  globals.css
+types/
+  index.ts
+  schema.ts
+.gitignore
+.npmrc
+eslint.config.mjs
+LICENSE
+next.config.js
+package.json
+postcss.config.js
+prisma.config.ts
+README.md
+tailwind.config.js
+tsconfig.json
+
+================================================================
+Files
+================================================================
+
+================
+File: app/actions/sources.ts
+================
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+
+export async function createSource(formData: FormData) {
+  const source_name = formData.get("source_name") as string;
+  const base_url = formData.get("base_url") as string;
+  const is_active = formData.get("is_active") !== null; 
+
+  if (!source_name || !base_url) {
+    return { error: "Name and URL are required" };
+  }
+
+  try {
+    await prisma.source_config.create({
+      data: {
+        source_name,
+        base_url,
+        is_active,
+        last_crawl_status: "PENDING",
+      },
+    });
+
+    revalidatePath("/sources");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Create source error:", error);
+    return { error: "Failed to create source. URL might be duplicate." };
+  }
+}
+
+export async function deleteSource(id: number) {
+  try {
+    await prisma.source_config.delete({
+      where: { id },
+    });
+    revalidatePath("/sources");
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to delete source" };
+  }
+}
+
+export async function updateSource(id: number, formData: FormData) {
+  const source_name = formData.get("source_name") as string;
+  const base_url = formData.get("base_url") as string;
+  const is_active = formData.get("is_active") !== null;
+
+  if (!source_name || !base_url) {
+    return { error: "Name and URL are required" };
+  }
+
+  try {
+    await prisma.source_config.update({
+      where: { id },
+      data: {
+        source_name,
+        base_url,
+        is_active,
+      },
+    });
+
+    revalidatePath("/sources");
+    return { success: true };
+  } catch (error) {
+    console.error("Update source error:", error);
+    return { error: "Failed to update source." };
+  }
+}
+
+================
+File: app/products/page.tsx
+================
+"use client";
+
+
+import {Table, TableHeader, TableColumn, TableBody, TableRow, TableCell} from '@heroui/table';
+// Mock mapping DB fields
+const products = [
+  { id: "1", product_id: "SP001", title: "iPhone 15 Pro Max", price_sale: 29990000, sold_count: 120, seller_id: "SHOP_APPLE" },
+  { id: "2", product_id: "SP002", title: "Samsung S24 Ultra", price_sale: 25000000, sold_count: 50, seller_id: "SHOP_SAMSUNG" },
+];
+
+export default function ProductsPage() {
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold">Base Products</h1>
+      <Table aria-label="Products table">
+        <TableHeader>
+          <TableColumn>PRODUCT ID</TableColumn>
+          <TableColumn>TITLE</TableColumn>
+          <TableColumn>PRICE</TableColumn>
+          <TableColumn>SOLD</TableColumn>
+          <TableColumn>SELLER</TableColumn>
+        </TableHeader>
+        <TableBody>
+          {products.map((p) => (
+            <TableRow key={p.id}>
+              <TableCell>{p.product_id}</TableCell>
+              <TableCell className="max-w-xs truncate">{p.title}</TableCell>
+              <TableCell>
+                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.price_sale)}
+              </TableCell>
+              <TableCell>{p.sold_count}</TableCell>
+              <TableCell>{p.seller_id}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+================
+File: app/error.tsx
+================
+"use client";
+
+import { useEffect } from "react";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
+  useEffect(() => {
+    // Log the error to an error reporting service
+    /* eslint-disable no-console */
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div>
+      <h2>Something went wrong!</h2>
+      <button
+        onClick={
+          // Attempt to recover by trying to re-render the segment
+          () => reset()
+        }
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
+================
+File: app/layout.tsx
+================
+import "@/styles/globals.css";
+import { Metadata } from "next";
+import { Providers } from "./providers";
+import { fontSans } from "@/config/fonts";
+import { Sidebar } from "@/components/sidebar";
+import clsx from "clsx";
+
+export const metadata: Metadata = {
+  title: "Data Warehouse Admin",
+  description: "Manage crawl sources and view data",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={clsx(
+          "min-h-screen bg-background font-sans antialiased",
+          fontSans.variable
+        )}
+      >
+        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
+          <div className="flex min-h-screen">
+            {/* Sidebar cố định */}
+            <Sidebar />
+            
+            {/* Nội dung chính bên phải */}
+            <main className="flex-1 ml-64 p-8 bg-background">
+              {children}
+            </main>
+          </div>
+        </Providers>
+      </body>
+    </html>
+  );
+}
+
+================
+File: app/page.tsx
+================
+"use client";
+
+import { Card, CardBody } from "@heroui/card";
+import { DatabaseIcon, ActivityIcon, AlertCircleIcon } from "lucide-react";
+
+export default function Dashboard() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatsCard 
+          title="Active Sources" 
+          value="5" 
+          icon={<DatabaseIcon className="text-primary" />} 
+        />
+        <StatsCard 
+          title="Total Products" 
+          value="12,450" 
+          icon={<ActivityIcon className="text-success" />} 
+        />
+        <StatsCard 
+          title="Failed Jobs Today" 
+          value="2" 
+          icon={<AlertCircleIcon className="text-danger" />} 
+        />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">System Health</h2>
+        <Card>
+          <CardBody>
+            <p className="text-default-500">Charts or detailed stats can go here (integration with Fact tables).</p>
+          </CardBody>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+const StatsCard = ({ title, value, icon }: any) => (
+  <Card>
+    <CardBody className="flex flex-row items-center gap-4 p-6">
+      <div className="p-3 bg-default-100 rounded-large">
+        {icon}
+      </div>
+      <div>
+        <p className="text-small text-default-500">{title}</p>
+        <h4 className="text-2xl font-bold">{value}</h4>
+      </div>
+    </CardBody>
+  </Card>
+);
+
+================
+File: app/providers.tsx
+================
+"use client";
+
+import type { ThemeProviderProps } from "next-themes";
+
+import * as React from "react";
+import { HeroUIProvider } from "@heroui/system";
+import { useRouter } from "next/navigation";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+export interface ProvidersProps {
+  children: React.ReactNode;
+  themeProps?: ThemeProviderProps;
+}
+
+declare module "@react-types/shared" {
+  interface RouterConfig {
+    routerOptions: NonNullable<
+      Parameters<ReturnType<typeof useRouter>["push"]>[1]
+    >;
+  }
+}
+
+export function Providers({ children, themeProps }: ProvidersProps) {
+  const router = useRouter();
+
+  return (
+    <HeroUIProvider navigate={router.push}>
+      <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
+    </HeroUIProvider>
+  );
+}
+
+================
+File: components/counter.tsx
+================
+"use client";
+
+import { useState } from "react";
+import { Button } from "@heroui/button";
+
+export const Counter = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <Button radius="full" onPress={() => setCount(count + 1)}>
+      Count is {count}
+    </Button>
+  );
+};
+
+================
+File: components/create-source-modal.tsx
+================
+"use client";
+
+import { PlusIcon } from "lucide-react";
+import { createSource } from "@/app/actions/sources";
+import { useState } from "react";
+import { Button } from "@heroui/button";
+import {Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, useDisclosure} from '@heroui/modal'
+import {Input} from '@heroui/input'
+import {Checkbox} from '@heroui/checkbox'
+
+export const CreateSourceModal = () => {
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    const formData = new FormData(event.currentTarget);
+    const result = await createSource(formData);
+
+    setIsLoading(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <>
+      <Button onPress={onOpen} color="primary" startContent={<PlusIcon size={18} />}>
+        Add Source
+      </Button>
+
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} placement="top-center">
+        <ModalContent>
+          {(onClose) => (
+            <form onSubmit={handleSubmit}>
+              <ModalHeader className="flex flex-col gap-1">Add New Source</ModalHeader>
+              <ModalBody>
+                {error && <div className="text-danger text-sm">{error}</div>}
+                
+                <Input
+                  autoFocus
+                  label="Source Name"
+                  name="source_name"
+                  placeholder="e.g. Shopee Electronics"
+                  variant="bordered"
+                  isRequired
+                />
+                <Input
+                  label="Base URL"
+                  name="base_url"
+                  placeholder="https://shopee.vn/..."
+                  variant="bordered"
+                  isRequired
+                />
+                <div className="flex py-2 px-1 justify-between">
+                  <Checkbox name="is_active" defaultSelected value="true">
+                    Is Active
+                  </Checkbox>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="flat" onPress={onClose}>
+                  Cancel
+                </Button>
+                <Button color="primary" type="submit" isLoading={isLoading}>
+                  Save Config
+                </Button>
+              </ModalFooter>
+            </form>
+          )}
+        </ModalContent>
+      </Modal>
+    </>
+  );
+};
+
+================
+File: components/edit-source-modal.tsx
+================
+"use client";
+
+import {Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, useDisclosure} from '@heroui/modal'
+import {Input} from '@heroui/input'
+import {Checkbox} from '@heroui/checkbox'
+import { EditIcon } from "lucide-react";
+import { updateSource } from "@/app/actions/sources";
+import { useState } from "react";
+import { Tooltip } from '@heroui/tooltip';
+import { Button } from '@heroui/button';
+
+// Định nghĩa kiểu dữ liệu cho props
+interface SourceConfig {
+  id: number;
+  source_name: string;
+  base_url: string;
+  is_active: boolean;
+}
+
+export const EditSourceModal = ({ source }: { source: SourceConfig }) => {
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    const formData = new FormData(event.currentTarget);
+    const result = await updateSource(source.id, formData);
+
+    setIsLoading(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <>
+      <Tooltip content="Edit source">
+        <span 
+          className="text-lg text-default-400 cursor-pointer active:opacity-50 hover:text-primary"
+          onClick={onOpen}
+        >
+          <EditIcon size={18} />
+        </span>
+      </Tooltip>
+
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} placement="top-center">
+        <ModalContent>
+          {(onClose) => (
+            <form onSubmit={handleSubmit}>
+              <ModalHeader className="flex flex-col gap-1">Edit Source #{source.id}</ModalHeader>
+              <ModalBody>
+                {error && <div className="text-danger text-sm">{error}</div>}
+                
+                <Input
+                  label="Source Name"
+                  name="source_name"
+                  defaultValue={source.source_name}
+                  variant="bordered"
+                  isRequired
+                />
+                <Input
+                  label="Base URL"
+                  name="base_url"
+                  defaultValue={source.base_url} 
+                  variant="bordered"
+                  isRequired
+                />
+                <div className="flex py-2 px-1 justify-between">
+                  <Checkbox 
+                    name="is_active" 
+                    defaultSelected={source.is_active}
+                    value="true"
+                  >
+                    Is Active
+                  </Checkbox>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="flat" onPress={onClose}>
+                  Cancel
+                </Button>
+                <Button color="primary" type="submit" isLoading={isLoading}>
+                  Update Config
+                </Button>
+              </ModalFooter>
+            </form>
+          )}
+        </ModalContent>
+      </Modal>
+    </>
+  );
+};
+
+================
+File: components/icons.tsx
+================
+import * as React from "react";
+
+import { IconSvgProps } from "@/types";
+
+export const Logo: React.FC<IconSvgProps> = ({
+  size = 36,
+  width,
+  height,
+  ...props
+}) => (
+  <svg
+    fill="none"
+    height={size || height}
+    viewBox="0 0 32 32"
+    width={size || width}
+    {...props}
+  >
+    <path
+      clipRule="evenodd"
+      d="M17.6482 10.1305L15.8785 7.02583L7.02979 22.5499H10.5278L17.6482 10.1305ZM19.8798 14.0457L18.11 17.1983L19.394 19.4511H16.8453L15.1056 22.5499H24.7272L19.8798 14.0457Z"
+      fill="currentColor"
+      fillRule="evenodd"
+    />
+  </svg>
+);
+
+export const DiscordIcon: React.FC<IconSvgProps> = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}) => {
+  return (
+    <svg
+      height={size || height}
+      viewBox="0 0 24 24"
+      width={size || width}
+      {...props}
+    >
+      <path
+        d="M14.82 4.26a10.14 10.14 0 0 0-.53 1.1 14.66 14.66 0 0 0-4.58 0 10.14 10.14 0 0 0-.53-1.1 16 16 0 0 0-4.13 1.3 17.33 17.33 0 0 0-3 11.59 16.6 16.6 0 0 0 5.07 2.59A12.89 12.89 0 0 0 8.23 18a9.65 9.65 0 0 1-1.71-.83 3.39 3.39 0 0 0 .42-.33 11.66 11.66 0 0 0 10.12 0q.21.18.42.33a10.84 10.84 0 0 1-1.71.84 12.41 12.41 0 0 0 1.08 1.78 16.44 16.44 0 0 0 5.06-2.59 17.22 17.22 0 0 0-3-11.59 16.09 16.09 0 0 0-4.09-1.35zM8.68 14.81a1.94 1.94 0 0 1-1.8-2 1.93 1.93 0 0 1 1.8-2 1.93 1.93 0 0 1 1.8 2 1.93 1.93 0 0 1-1.8 2zm6.64 0a1.94 1.94 0 0 1-1.8-2 1.93 1.93 0 0 1 1.8-2 1.92 1.92 0 0 1 1.8 2 1.92 1.92 0 0 1-1.8 2z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+};
+
+export const TwitterIcon: React.FC<IconSvgProps> = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}) => {
+  return (
+    <svg
+      height={size || height}
+      viewBox="0 0 24 24"
+      width={size || width}
+      {...props}
+    >
+      <path
+        d="M19.633 7.997c.013.175.013.349.013.523 0 5.325-4.053 11.461-11.46 11.461-2.282 0-4.402-.661-6.186-1.809.324.037.636.05.973.05a8.07 8.07 0 0 0 5.001-1.721 4.036 4.036 0 0 1-3.767-2.793c.249.037.499.062.761.062.361 0 .724-.05 1.061-.137a4.027 4.027 0 0 1-3.23-3.953v-.05c.537.299 1.16.486 1.82.511a4.022 4.022 0 0 1-1.796-3.354c0-.748.199-1.434.548-2.032a11.457 11.457 0 0 0 8.306 4.215c-.062-.3-.1-.611-.1-.923a4.026 4.026 0 0 1 4.028-4.028c1.16 0 2.207.486 2.943 1.272a7.957 7.957 0 0 0 2.556-.973 4.02 4.02 0 0 1-1.771 2.22 8.073 8.073 0 0 0 2.319-.624 8.645 8.645 0 0 1-2.019 2.083z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+};
+
+export const GithubIcon: React.FC<IconSvgProps> = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}) => {
+  return (
+    <svg
+      height={size || height}
+      viewBox="0 0 24 24"
+      width={size || width}
+      {...props}
+    >
+      <path
+        clipRule="evenodd"
+        d="M12.026 2c-5.509 0-9.974 4.465-9.974 9.974 0 4.406 2.857 8.145 6.821 9.465.499.09.679-.217.679-.481 0-.237-.008-.865-.011-1.696-2.775.602-3.361-1.338-3.361-1.338-.452-1.152-1.107-1.459-1.107-1.459-.905-.619.069-.605.069-.605 1.002.07 1.527 1.028 1.527 1.028.89 1.524 2.336 1.084 2.902.829.091-.645.351-1.085.635-1.334-2.214-.251-4.542-1.107-4.542-4.93 0-1.087.389-1.979 1.024-2.675-.101-.253-.446-1.268.099-2.64 0 0 .837-.269 2.742 1.021a9.582 9.582 0 0 1 2.496-.336 9.554 9.554 0 0 1 2.496.336c1.906-1.291 2.742-1.021 2.742-1.021.545 1.372.203 2.387.099 2.64.64.696 1.024 1.587 1.024 2.675 0 3.833-2.33 4.675-4.552 4.922.355.308.675.916.675 1.846 0 1.334-.012 2.41-.012 2.737 0 .267.178.577.687.479C19.146 20.115 22 16.379 22 11.974 22 6.465 17.535 2 12.026 2z"
+        fill="currentColor"
+        fillRule="evenodd"
+      />
+    </svg>
+  );
+};
+
+export const MoonFilledIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => (
+  <svg
+    aria-hidden="true"
+    focusable="false"
+    height={size || height}
+    role="presentation"
+    viewBox="0 0 24 24"
+    width={size || width}
+    {...props}
+  >
+    <path
+      d="M21.53 15.93c-.16-.27-.61-.69-1.73-.49a8.46 8.46 0 01-1.88.13 8.409 8.409 0 01-5.91-2.82 8.068 8.068 0 01-1.44-8.66c.44-1.01.13-1.54-.09-1.76s-.77-.55-1.83-.11a10.318 10.318 0 00-6.32 10.21 10.475 10.475 0 007.04 8.99 10 10 0 002.89.55c.16.01.32.02.48.02a10.5 10.5 0 008.47-4.27c.67-.93.49-1.519.32-1.79z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+export const SunFilledIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => (
+  <svg
+    aria-hidden="true"
+    focusable="false"
+    height={size || height}
+    role="presentation"
+    viewBox="0 0 24 24"
+    width={size || width}
+    {...props}
+  >
+    <g fill="currentColor">
+      <path d="M19 12a7 7 0 11-7-7 7 7 0 017 7z" />
+      <path d="M12 22.96a.969.969 0 01-1-.96v-.08a1 1 0 012 0 1.038 1.038 0 01-1 1.04zm7.14-2.82a1.024 1.024 0 01-.71-.29l-.13-.13a1 1 0 011.41-1.41l.13.13a1 1 0 010 1.41.984.984 0 01-.7.29zm-14.28 0a1.024 1.024 0 01-.71-.29 1 1 0 010-1.41l.13-.13a1 1 0 011.41 1.41l-.13.13a1 1 0 01-.7.29zM22 13h-.08a1 1 0 010-2 1.038 1.038 0 011.04 1 .969.969 0 01-.96 1zM2.08 13H2a1 1 0 010-2 1.038 1.038 0 011.04 1 .969.969 0 01-.96 1zm16.93-7.01a1.024 1.024 0 01-.71-.29 1 1 0 010-1.41l.13-.13a1 1 0 011.41 1.41l-.13.13a.984.984 0 01-.7.29zm-14.02 0a1.024 1.024 0 01-.71-.29l-.13-.14a1 1 0 011.41-1.41l.13.13a1 1 0 010 1.41.97.97 0 01-.7.3zM12 3.04a.969.969 0 01-1-.96V2a1 1 0 012 0 1.038 1.038 0 01-1 1.04z" />
+    </g>
+  </svg>
+);
+
+export const HeartFilledIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => (
+  <svg
+    aria-hidden="true"
+    focusable="false"
+    height={size || height}
+    role="presentation"
+    viewBox="0 0 24 24"
+    width={size || width}
+    {...props}
+  >
+    <path
+      d="M12.62 20.81c-.34.12-.9.12-1.24 0C8.48 19.82 2 15.69 2 8.69 2 5.6 4.49 3.1 7.56 3.1c1.82 0 3.43.88 4.44 2.24a5.53 5.53 0 0 1 4.44-2.24C19.51 3.1 22 5.6 22 8.69c0 7-6.48 11.13-9.38 12.12Z"
+      fill="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+    />
+  </svg>
+);
+
+export const SearchIcon = (props: IconSvgProps) => (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    focusable="false"
+    height="1em"
+    role="presentation"
+    viewBox="0 0 24 24"
+    width="1em"
+    {...props}
+  >
+    <path
+      d="M11.5 21C16.7467 21 21 16.7467 21 11.5C21 6.25329 16.7467 2 11.5 2C6.25329 2 2 6.25329 2 11.5C2 16.7467 6.25329 21 11.5 21Z"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    />
+    <path
+      d="M22 22L20 20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    />
+  </svg>
+);
+
+================
+File: components/primitives.ts
+================
+import { tv } from "tailwind-variants";
+
+export const title = tv({
+  base: "tracking-tight inline font-semibold",
+  variants: {
+    color: {
+      violet: "from-[#FF1CF7] to-[#b249f8]",
+      yellow: "from-[#FF705B] to-[#FFB457]",
+      blue: "from-[#5EA2EF] to-[#0072F5]",
+      cyan: "from-[#00b7fa] to-[#01cfea]",
+      green: "from-[#6FEE8D] to-[#17c964]",
+      pink: "from-[#FF72E1] to-[#F54C7A]",
+      foreground: "dark:from-[#FFFFFF] dark:to-[#4B4B4B]",
+    },
+    size: {
+      sm: "text-3xl lg:text-4xl",
+      md: "text-[2.3rem] lg:text-5xl",
+      lg: "text-4xl lg:text-6xl",
+    },
+    fullWidth: {
+      true: "w-full block",
+    },
+  },
+  defaultVariants: {
+    size: "md",
+  },
+  compoundVariants: [
+    {
+      color: [
+        "violet",
+        "yellow",
+        "blue",
+        "cyan",
+        "green",
+        "pink",
+        "foreground",
+      ],
+      class: "bg-clip-text text-transparent bg-gradient-to-b",
+    },
+  ],
+});
+
+export const subtitle = tv({
+  base: "w-full md:w-1/2 my-2 text-lg lg:text-xl text-default-600 block max-w-full",
+  variants: {
+    fullWidth: {
+      true: "!w-full",
+    },
+  },
+  defaultVariants: {
+    fullWidth: true,
+  },
+});
+
+================
+File: components/sidebar.tsx
+================
+"use client";
+
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import {
+    HomeIcon,
+    DatabaseIcon,
+    FileTextIcon,
+    SettingsIcon,
+    LayersIcon
+} from "lucide-react";
+import { ThemeSwitch } from "./theme-switch";
+
+const menuItems = [
+    { name: "Dashboard", href: "/", icon: HomeIcon },
+    { name: "Source Configs", href: "/sources", icon: SettingsIcon },
+    { name: "Crawl Logs", href: "/logs", icon: FileTextIcon },
+    { name: "Raw Products", href: "/raw-data", icon: DatabaseIcon },
+    { name: "Base Products", href: "/products", icon: LayersIcon },
+];
+
+export const Sidebar = () => {
+    const pathname = usePathname();
+
+    return (
+        <div className="w-64 h-screen bg-content1 border-r border-divider flex flex-col fixed left-0 top-0 z-50">
+            <div className="h-16 flex items-center px-6 border-b border-divider">
+                <span className="text-xl font-bold text-primary">DW Admin</span>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto py-4">
+                <ul className="flex flex-col gap-2 px-3">
+                    {menuItems.map((item) => {
+                        const isActive = pathname === item.href;
+                        return (
+                            <li key={item.href}>
+                                <Link
+                                    href={item.href}
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-medium transition-colors ${isActive
+                                            ? "bg-primary text-primary-foreground font-medium"
+                                            : "text-default-500 hover:bg-default-100 hover:text-foreground"
+                                        }`}
+                                >
+                                    <item.icon size={20} />
+                                    <span>{item.name}</span>
+                                </Link>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </nav>
+
+            <div className="p-4 border-t border-divider">
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-default-600">Appearance</span>
+                    <div className="bg-default-100 rounded-medium p-3 mt-2">
+                        <p className="text-xs text-default-500 font-semibold">DW</p>
+                        <p className="text-[10px] text-default-400">Version 1.0.0</p>
+                    </div>
+                    <ThemeSwitch />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+================
+File: components/sources-table.tsx
+================
+"use client";
+
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
+import { Chip } from '@heroui/chip';
+import { Tooltip } from '@heroui/tooltip'
+import { EditIcon, TrashIcon, RefreshCwIcon } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { Pagination } from '@heroui/pagination'
+import { EditSourceModal } from '@/components/edit-source-modal';
+import { deleteSource } from '@/app/actions/sources';
+
+interface SourcesTableProps {
+    sources: any[];
+    totalPages: number;
+}
+
+const statusColorMap: Record<string, "success" | "danger" | "warning"> = {
+    SUCCESS: "success",
+    FAILED: "danger",
+    PENDING: "warning",
+};
+
+export const SourcesTable = ({ sources, totalPages }: SourcesTableProps) => {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const currentPage = Number(searchParams.get("page")) || 1;
+
+    const formatDate = (date: Date | null) => {
+        if (!date) return "N/A";
+        return new Date(date).toLocaleString('vi-VN');
+    };
+
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams);
+        params.set("page", page.toString());
+        router.push(`${pathname}?${params.toString()}`);
+    };
+    const handleDelete = async (id: number) => {
+        if (confirm("Are you sure you want to delete this source?")) {
+            await deleteSource(id);
+        }
+    };
+
+    return (
+        <Table
+            aria-label="Source configs table"
+            bottomContent={
+                totalPages > 1 ? (
+                    <div className="flex w-full justify-center">
+                        <Pagination
+                            isCompact
+                            showControls
+                            showShadow
+                            color="primary"
+                            page={currentPage}
+                            total={totalPages}
+                            onChange={handlePageChange}
+                        />
+                    </div>
+                ) : null
+            }
+        >
+            <TableHeader>
+                <TableColumn>ID</TableColumn>
+                <TableColumn>SOURCE NAME</TableColumn>
+                <TableColumn>STATUS</TableColumn>
+                <TableColumn>LAST CRAWL</TableColumn>
+                <TableColumn>ACTIONS</TableColumn>
+            </TableHeader>
+            <TableBody emptyContent={"No rows to display."}>
+                {sources.map((source) => (
+                    <TableRow key={source.id}>
+                        <TableCell>#{source.id}</TableCell>
+                        <TableCell>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-sm">{source.source_name}</span>
+                                <span className="text-tiny text-default-400 truncate max-w-[200px]">
+                                    {source.base_url}
+                                </span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <Chip
+                                className="capitalize"
+                                color={source.is_active ? "success" : "default"}
+                                size="sm"
+                                variant="flat"
+                            >
+                                {source.is_active ? "Active" : "Inactive"}
+                            </Chip>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex flex-col gap-1">
+                                <Chip
+                                    size="sm"
+                                    color={statusColorMap[source.last_crawl_status || "PENDING"] || "default"}
+                                    variant="dot"
+                                >
+                                    {source.last_crawl_status || "N/A"}
+                                </Chip>
+                                <span className="text-tiny text-default-400">
+                                    {formatDate(source.last_crawl_timestamp)}
+                                </span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-2">
+                                <EditSourceModal source={source} />
+                                <Tooltip color="danger" content="Delete source">
+                                    <span
+                                        className="text-lg text-danger cursor-pointer active:opacity-50 hover:opacity-100"
+                                        onClick={() => handleDelete(source.id)}
+                                    >
+                                        <TrashIcon size={18} />
+                                    </span>
+                                </Tooltip>
+                                <Tooltip content="Trigger Crawl">
+                                    <span className="text-lg text-primary cursor-pointer active:opacity-50 hover:opacity-100">
+                                        <RefreshCwIcon size={18} />
+                                    </span>
+                                </Tooltip>
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    );
+};
+
+================
+File: components/theme-switch.tsx
+================
+"use client";
+
+import { FC } from "react";
+import { VisuallyHidden } from "@react-aria/visually-hidden";
+import { SwitchProps, useSwitch } from "@heroui/switch";
+import { useTheme } from "next-themes";
+import { useIsSSR } from "@react-aria/ssr";
+import clsx from "clsx";
+
+import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
+
+export interface ThemeSwitchProps {
+  className?: string;
+  classNames?: SwitchProps["classNames"];
+}
+
+export const ThemeSwitch: FC<ThemeSwitchProps> = ({
+  className,
+  classNames,
+}) => {
+  const { theme, setTheme } = useTheme();
+  const isSSR = useIsSSR();
+
+  const onChange = () => {
+    theme === "light" ? setTheme("dark") : setTheme("light");
+  };
+
+  const {
+    Component,
+    slots,
+    isSelected,
+    getBaseProps,
+    getInputProps,
+    getWrapperProps,
+  } = useSwitch({
+    isSelected: theme === "light" || isSSR,
+    "aria-label": `Switch to ${theme === "light" || isSSR ? "dark" : "light"} mode`,
+    onChange,
+  });
+
+  return (
+    <Component
+      {...getBaseProps({
+        className: clsx(
+          "px-px transition-opacity hover:opacity-80 cursor-pointer",
+          className,
+          classNames?.base,
+        ),
+      })}
+    >
+      <VisuallyHidden>
+        <input {...getInputProps()} />
+      </VisuallyHidden>
+      <div
+        {...getWrapperProps()}
+        className={slots.wrapper({
+          class: clsx(
+            [
+              "w-auto h-auto",
+              "bg-transparent",
+              "rounded-lg",
+              "flex items-center justify-center",
+              "group-data-[selected=true]:bg-transparent",
+              "!text-default-500",
+              "pt-px",
+              "px-0",
+              "mx-0",
+            ],
+            classNames?.wrapper,
+          ),
+        })}
+      >
+        {!isSelected || isSSR ? (
+          <SunFilledIcon size={22} />
+        ) : (
+          <MoonFilledIcon size={22} />
+        )}
+      </div>
+    </Component>
+  );
+};
+
+================
+File: config/fonts.ts
+================
+import { Fira_Code as FontMono, Inter as FontSans } from "next/font/google";
+
+export const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+export const fontMono = FontMono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
+
+================
+File: config/site.ts
+================
+export type SiteConfig = typeof siteConfig;
+
+export const siteConfig = {
+  name: "Next.js + HeroUI",
+  description: "Make beautiful websites regardless of your design experience.",
+  navItems: [
+    {
+      label: "Home",
+      href: "/",
+    },
+    {
+      label: "Docs",
+      href: "/docs",
+    },
+    {
+      label: "Pricing",
+      href: "/pricing",
+    },
+    {
+      label: "Blog",
+      href: "/blog",
+    },
+    {
+      label: "About",
+      href: "/about",
+    },
+  ],
+  navMenuItems: [
+    {
+      label: "Profile",
+      href: "/profile",
+    },
+    {
+      label: "Dashboard",
+      href: "/dashboard",
+    },
+    {
+      label: "Projects",
+      href: "/projects",
+    },
+    {
+      label: "Team",
+      href: "/team",
+    },
+    {
+      label: "Calendar",
+      href: "/calendar",
+    },
+    {
+      label: "Settings",
+      href: "/settings",
+    },
+    {
+      label: "Help & Feedback",
+      href: "/help-feedback",
+    },
+    {
+      label: "Logout",
+      href: "/logout",
+    },
+  ],
+  links: {
+    github: "https://github.com/heroui-inc/heroui",
+    twitter: "https://twitter.com/hero_ui",
+    docs: "https://heroui.com",
+    discord: "https://discord.gg/9b6yyZKmH4",
+    sponsor: "https://patreon.com/jrgarciadev",
+  },
+};
+
+================
+File: lib/prisma.ts
+================
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+================
+File: public/next.svg
+================
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+
+================
+File: public/vercel.svg
+================
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 283 64"><path fill="black" d="M141 16c-11 0-19 7-19 18s9 18 20 18c7 0 13-3 16-7l-7-5c-2 3-6 4-9 4-5 0-9-3-10-7h28v-3c0-11-8-18-19-18zm-9 15c1-4 4-7 9-7s8 3 9 7h-18zm117-15c-11 0-19 7-19 18s9 18 20 18c6 0 12-3 16-7l-8-5c-2 3-5 4-8 4-5 0-9-3-11-7h28l1-3c0-11-8-18-19-18zm-10 15c2-4 5-7 10-7s8 3 9 7h-19zm-39 3c0 6 4 10 10 10 4 0 7-2 9-5l8 5c-3 5-9 8-17 8-11 0-19-7-19-18s8-18 19-18c8 0 14 3 17 8l-8 5c-2-3-5-5-9-5-6 0-10 4-10 10zm83-29v46h-9V5h9zM37 0l37 64H0L37 0zm92 5-27 48L74 5h10l18 30 17-30h10zm59 12v10l-3-1c-6 0-10 4-10 10v15h-9V17h9v9c0-5 6-9 13-9z"/></svg>
+
+================
+File: styles/globals.css
+================
+@import "tailwindcss";
+
+@config "../tailwind.config.js"
+
+================
+File: types/index.ts
+================
+import { SVGProps } from "react";
+
+export type IconSvgProps = SVGProps<SVGSVGElement> & {
+  size?: number;
+};
+
+================
+File: .gitignore
+================
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+bun.lockb
+/app/generated/prisma
+
+================
+File: .npmrc
+================
+public-hoist-pattern[]=*@heroui/*
+package-lock=true
+
+================
+File: eslint.config.mjs
+================
+import { defineConfig, globalIgnores } from "eslint/config";
+import { fixupConfigRules, fixupPluginRules } from "@eslint/compat";
+import react from "eslint-plugin-react";
+import unusedImports from "eslint-plugin-unused-imports";
+import _import from "eslint-plugin-import";
+import typescriptEslint from "@typescript-eslint/eslint-plugin";
+import jsxA11Y from "eslint-plugin-jsx-a11y";
+import prettier from "eslint-plugin-prettier";
+import globals from "globals";
+import tsParser from "@typescript-eslint/parser";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import js from "@eslint/js";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const compat = new FlatCompat({
+    baseDirectory: __dirname,
+    recommendedConfig: js.configs.recommended,
+    allConfig: js.configs.all
+});
+
+export default defineConfig([globalIgnores([
+    ".now/*",
+    "**/*.css",
+    "**/.changeset",
+    "**/dist",
+    "esm/*",
+    "public/*",
+    "tests/*",
+    "scripts/*",
+    "**/*.config.js",
+    "**/.DS_Store",
+    "**/node_modules",
+    "**/coverage",
+    "**/.next",
+    "**/build",
+    "!**/.commitlintrc.cjs",
+    "!**/.lintstagedrc.cjs",
+    "!**/jest.config.js",
+    "!**/plopfile.js",
+    "!**/react-shim.js",
+    "!**/tsup.config.ts",
+]), {
+    extends: fixupConfigRules(compat.extends(
+        "plugin:react/recommended",
+        "plugin:prettier/recommended",
+        "plugin:react-hooks/recommended",
+        "plugin:jsx-a11y/recommended",
+        "plugin:@next/next/recommended",
+    )),
+
+    plugins: {
+        react: fixupPluginRules(react),
+        "unused-imports": unusedImports,
+        import: fixupPluginRules(_import),
+        "@typescript-eslint": typescriptEslint,
+        "jsx-a11y": fixupPluginRules(jsxA11Y),
+        prettier: fixupPluginRules(prettier),
+    },
+
+    languageOptions: {
+        globals: {
+            ...Object.fromEntries(Object.entries(globals.browser).map(([key]) => [key, "off"])),
+            ...globals.node,
+        },
+
+        parser: tsParser,
+        ecmaVersion: 12,
+        sourceType: "module",
+
+        parserOptions: {
+            ecmaFeatures: {
+                jsx: true,
+            },
+        },
+    },
+
+    settings: {
+        react: {
+            version: "detect",
+        },
+    },
+
+    files: ["**/*.ts", "**/*.tsx"],
+
+    rules: {
+        "no-console": "warn",
+        "react/prop-types": "off",
+        "react/jsx-uses-react": "off",
+        "react/react-in-jsx-scope": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "jsx-a11y/click-events-have-key-events": "warn",
+        "jsx-a11y/interactive-supports-focus": "warn",
+        "prettier/prettier": "warn",
+        "no-unused-vars": "off",
+        "unused-imports/no-unused-vars": "off",
+        "unused-imports/no-unused-imports": "warn",
+
+        "@typescript-eslint/no-unused-vars": ["warn", {
+            args: "after-used",
+            ignoreRestSiblings: false,
+            argsIgnorePattern: "^_.*?$",
+        }],
+
+        "import/order": ["warn", {
+            groups: [
+                "type",
+                "builtin",
+                "object",
+                "external",
+                "internal",
+                "parent",
+                "sibling",
+                "index",
+            ],
+
+            pathGroups: [{
+                pattern: "~/**",
+                group: "external",
+                position: "after",
+            }],
+
+            "newlines-between": "always",
+        }],
+
+        "react/self-closing-comp": "warn",
+
+        "react/jsx-sort-props": ["warn", {
+            callbacksLast: true,
+            shorthandFirst: true,
+            noSortAlphabetically: false,
+            reservedFirst: true,
+        }],
+
+        "padding-line-between-statements": ["warn", {
+            blankLine: "always",
+            prev: "*",
+            next: "return",
+        }, {
+            blankLine: "always",
+            prev: ["const", "let", "var"],
+            next: "*",
+        }, {
+            blankLine: "any",
+            prev: ["const", "let", "var"],
+            next: ["const", "let", "var"],
+        }],
+    },
+}]);
+
+================
+File: LICENSE
+================
+MIT License
+
+Copyright (c) 2023 Next UI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================
+File: next.config.js
+================
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+module.exports = nextConfig;
+
+================
+File: package.json
+================
+{
+  "name": "next-app-template",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint --fix"
+  },
+  "dependencies": {
+    "@heroui/accordion": "2.2.24",
+    "@heroui/alert": "2.2.27",
+    "@heroui/autocomplete": "2.3.29",
+    "@heroui/avatar": "2.2.22",
+    "@heroui/badge": "2.2.17",
+    "@heroui/button": "2.2.27",
+    "@heroui/card": "2.2.25",
+    "@heroui/chip": "2.2.22",
+    "@heroui/code": "2.2.21",
+    "@heroui/divider": "2.2.20",
+    "@heroui/drawer": "2.2.24",
+    "@heroui/dropdown": "2.3.27",
+    "@heroui/form": "2.1.27",
+    "@heroui/framer-utils": "2.1.23",
+    "@heroui/image": "2.2.17",
+    "@heroui/input": "2.4.28",
+    "@heroui/kbd": "2.2.22",
+    "@heroui/link": "2.2.23",
+    "@heroui/listbox": "2.3.26",
+    "@heroui/modal": "2.2.24",
+    "@heroui/navbar": "2.2.25",
+    "@heroui/pagination": "2.2.24",
+    "@heroui/popover": "2.3.27",
+    "@heroui/progress": "2.2.22",
+    "@heroui/radio": "2.3.27",
+    "@heroui/react-utils": "2.1.14",
+    "@heroui/scroll-shadow": "2.3.18",
+    "@heroui/select": "2.4.28",
+    "@heroui/skeleton": "2.2.17",
+    "@heroui/snippet": "2.2.28",
+    "@heroui/spacer": "2.2.21",
+    "@heroui/spinner": "2.2.24",
+    "@heroui/switch": "2.2.24",
+    "@heroui/system": "2.4.23",
+    "@heroui/table": "2.2.27",
+    "@heroui/tabs": "2.2.24",
+    "@heroui/theme": "2.4.23",
+    "@heroui/toast": "2.0.17",
+    "@heroui/tooltip": "2.2.24",
+    "@heroui/user": "2.2.22",
+    "@prisma/client": "5.14.0",
+    "@react-aria/ssr": "3.9.10",
+    "@react-aria/visually-hidden": "3.8.28",
+    "clsx": "2.1.1",
+    "framer-motion": "11.18.2",
+    "intl-messageformat": "10.7.16",
+    "lucide-react": "^0.554.0",
+    "next": "15.3.1",
+    "next-themes": "0.4.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "15.3.4",
+    "@react-types/shared": "3.32.1",
+    "@tailwindcss/postcss": "4.1.11",
+    "@types/node": "20.5.7",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "@typescript-eslint/eslint-plugin": "8.34.1",
+    "@typescript-eslint/parser": "8.34.1",
+    "eslint": "9.25.1",
+    "eslint-config-next": "15.3.4",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-prettier": "5.2.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-unused-imports": "4.1.4",
+    "globals": "16.0.0",
+    "postcss": "8.5.6",
+    "prettier": "3.5.3",
+    "prisma": "5.14.0",
+    "tailwind-variants": "3.1.1",
+    "tailwindcss": "4.1.11",
+    "typescript": "5.6.3"
+  }
+}
+
+================
+File: postcss.config.js
+================
+module.exports = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+}
+
+================
+File: prisma.config.ts
+================
+// This file was generated by Prisma and assumes you have installed the following:
+// npm install --save-dev prisma dotenv
+import "dotenv/config";
+import { defineConfig, env } from "prisma/config";
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: {
+    path: "prisma/migrations",
+  },
+  datasource: {
+    url: env("DATABASE_URL"),
+  },
+});
+
+================
+File: README.md
+================
+# Next.js & HeroUI Template
+
+This is a template for creating applications using Next.js 14 (app directory) and HeroUI (v2).
+
+[Try it on CodeSandbox](https://githubbox.com/heroui-inc/heroui/next-app-template)
+
+## Technologies Used
+
+- [Next.js 14](https://nextjs.org/docs/getting-started)
+- [HeroUI v2](https://heroui.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Tailwind Variants](https://tailwind-variants.org)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Framer Motion](https://www.framer.com/motion/)
+- [next-themes](https://github.com/pacocoursey/next-themes)
+
+## How to Use
+
+### Use the template with create-next-app
+
+To create a new project based on this template using `create-next-app`, run the following command:
+
+```bash
+npx create-next-app -e https://github.com/heroui-inc/next-app-template
+```
+
+### Install dependencies
+
+You can use one of them `npm`, `yarn`, `pnpm`, `bun`, Example using `npm`:
+
+```bash
+npm install
+```
+
+### Run the development server
+
+```bash
+npm run dev
+```
+
+### Setup pnpm (optional)
+
+If you are using `pnpm`, you need to add the following code to your `.npmrc` file:
+
+```bash
+public-hoist-pattern[]=*@heroui/*
+```
+
+After modifying the `.npmrc` file, you need to run `pnpm install` again to ensure that the dependencies are installed correctly.
+
+## License
+
+Licensed under the [MIT license](https://github.com/heroui-inc/next-app-template/blob/main/LICENSE).
+
+================
+File: tailwind.config.js
+================
+import {heroui} from "@heroui/theme"
+
+/** @type {import('tailwindcss').Config} */
+const config = {
+  content: [
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}"
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)"],
+        mono: ["var(--font-mono)"],
+      },
+    },
+  },
+  darkMode: "class",
+  plugins: [heroui()],
+}
+
+module.exports = config;
+
+================
+File: tsconfig.json
+================
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
+================
+File: components/logs-table.tsx
+================
+"use client";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
+import { Chip } from '@heroui/chip';
+import { Pagination } from "@heroui/pagination";
+
+interface Log {
+  id: number;
+  file_name: string;
+  file_path: string;
+  record_count: number | null;
+  status: string;
+  error_message: string | null;
+  created_at: Date | null;
+  source_config: { id: string };
+}
+
+export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: number }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPage = Number(searchParams.get("page")) || 1;
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", page.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  return (
+    <Table 
+      aria-label="Crawl logs table"
+      bottomContent={
+        totalPages > 1 && (
+          <div className="flex w-full justify-center">
+             <Pagination isCompact showControls page={currentPage} total={totalPages} onChange={handlePageChange} />
+          </div>
+        )
+      }
+    >
+      <TableHeader>
+        <TableColumn>ID</TableColumn>
+        <TableColumn>SOURCE_ID</TableColumn>
+        <TableColumn>FILE NAME</TableColumn>
+        <TableColumn>FILE PATH</TableColumn>
+        <TableColumn>RECORDS</TableColumn>
+        <TableColumn>STATUS</TableColumn>
+        <TableColumn>TIME</TableColumn>
+      </TableHeader>
+      <TableBody emptyContent="No logs found">
+        {logs.map((log) => (
+          <TableRow key={log.id}>
+            <TableCell>#{log.id}</TableCell>
+            <TableCell className="font-bold text-small">#{log.source_config?.id}</TableCell>
+            <TableCell>{log.file_name}</TableCell>
+            <TableCell>{log.file_path}</TableCell>
+            <TableCell>{log.record_count ?? 0}</TableCell>
+            <TableCell>
+              <Chip color={log.status === "SUCCESS" ? "success" : log.status === "FAILED" ? "danger" : "warning"} size="sm" variant="flat">
+                {log.status}
+              </Chip>
+              {log.error_message && <div className="text-tiny text-danger max-w-[200px] truncate" title={log.error_message}>{log.error_message}</div>}
+            </TableCell>
+            <TableCell>{log.created_at ? new Date(log.created_at).toLocaleString('vi-VN') : ""}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+};
+
+================
+File: prisma/schema.prisma
+================
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["controller", "staging", "warehouse"]
+}
+
+model crawled_files_log {
+  id               Int           @id @default(autoincrement())
+  source_config_id Int
+  file_name        String        @db.VarChar(255)
+  file_path        String?       @db.VarChar(1024)
+  record_count     Int?
+  status           String        @default("PENDING") @db.VarChar(50)
+  error_message    String?
+  created_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  processed_at     DateTime?     @db.Timestamptz(6)
+  source_config    source_config @relation(fields: [source_config_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("controller")
+}
+
+model source_config {
+  id                   Int                 @id @default(autoincrement())
+  source_name          String              @db.VarChar(255)
+  base_url             String              @unique
+  is_active            Boolean             @default(true)
+  last_crawl_status    String?             @db.VarChar(50)
+  last_crawl_timestamp DateTime?           @db.Timestamptz(6)
+  created_at           DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?           @default(now()) @db.Timestamptz(6)
+  crawled_files_log    crawled_files_log[]
+
+  @@schema("controller")
+}
+
+model tbl_base_product_reviews {
+  id                BigInt    @id @default(autoincrement())
+  review_id         String    @unique(map: "uq_base_reviews_review_id") @db.VarChar(50)
+  product_id        String?   @db.VarChar(50)
+  sku_id            String?   @db.VarChar(50)
+  sku_specification String?   @db.VarChar(255)
+  rating            Int?
+  display_text      String?
+  images            Json?
+  review_timestamp  DateTime? @db.Timestamptz(6)
+  media             Json?
+  load_timestamp    DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([product_id], map: "idx_base_reviews_product_id")
+  @@index([sku_id], map: "idx_base_reviews_sku_id")
+  @@schema("staging")
+}
+
+model tbl_base_product_skus {
+  id             BigInt    @id @default(autoincrement())
+  product_id     String?   @db.VarChar(50)
+  sku_id         String    @db.VarChar(50)
+  sku_sale_props Json?
+  stock          Int?
+  price_real     Decimal?  @db.Decimal(18, 2)
+  price_original Decimal?  @db.Decimal(18, 2)
+  valid_to       DateTime? @db.Timestamptz(6)
+  load_timestamp DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([sku_id], map: "idx_base_skus_sku_id")
+  @@schema("staging")
+}
+
+model tbl_base_products {
+  id             BigInt    @id @default(autoincrement())
+  product_id     String    @db.VarChar(50)
+  title          String?   @db.VarChar(500)
+  description    String?
+  specifications Json?
+  price_original Decimal?  @db.Decimal(18, 2)
+  price_sale     Decimal?  @db.Decimal(18, 2)
+  currency       String?   @db.VarChar(10)
+  sold_count     Int?
+  images         Json?
+  avg_rating     Float?
+  review_count   Int?
+  default_sku_id String?   @db.VarChar(50)
+  categories     Json?
+  seller_id      String?   @db.VarChar(50)
+  valid_to       DateTime? @db.Timestamptz(6)
+  load_timestamp DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([product_id], map: "idx_base_products_product_id")
+  @@schema("staging")
+}
+
+model tbl_base_shop_info {
+  id                    BigInt    @id @default(autoincrement())
+  seller_id             String    @unique(map: "uq_base_shop_seller_id") @db.VarChar(50)
+  shop_name             String?   @db.VarChar(255)
+  description           String?
+  sold_count            BigInt?
+  on_sell_product_count Int?
+  review_count          BigInt?
+  followers_count       BigInt?
+  video_count           Int?
+  shop_logo             Json?
+  shop_rating           Float?
+  shop_link             String?   @db.VarChar(1024)
+  region                String?   @db.VarChar(50)
+  worst_rating          Int?
+  best_rating           Int?
+  valid_to              DateTime? @db.Timestamptz(6)
+  load_timestamp        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([seller_id], map: "idx_base_shop_info_id")
+  @@schema("staging")
+}
+
+model tbl_products_raw {
+  id               BigInt    @id @default(autoincrement())
+  product_id       String    @db.VarChar(50)
+  raw_data         Json?
+  source_file_name String?   @db.VarChar(255)
+  load_timestamp   DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([product_id], map: "idx_products_raw_product_id")
+  @@schema("staging")
+}
+
+model agg_product_daily_summary {
+  summary_key           Int          @id @default(autoincrement())
+  date_key              Int?
+  product_key           Int?
+  shop_key              Int?
+  total_reviews_today   Int?
+  avg_rating_today      Decimal?     @db.Decimal(3, 2)
+  total_sold_cumulative Int?
+  current_stock         Int?
+  current_price         Decimal?     @db.Decimal(18, 2)
+  dim_date              dim_date?    @relation(fields: [date_key], references: [date_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_product           dim_product? @relation(fields: [product_key], references: [product_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_shop              dim_shop?    @relation(fields: [shop_key], references: [shop_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_agg_daily_date")
+  @@index([product_key], map: "idx_agg_daily_product")
+  @@schema("warehouse")
+}
+
+model dim_date {
+  date_key                  Int                         @id
+  full_date                 DateTime                    @db.Date
+  day_of_week               Int                         @db.SmallInt
+  day_name                  String                      @db.VarChar(20)
+  day_of_month              Int                         @db.SmallInt
+  month                     Int                         @db.SmallInt
+  month_name                String                      @db.VarChar(20)
+  quarter                   Int                         @db.SmallInt
+  year                      Int                         @db.SmallInt
+  is_weekend                Boolean
+  agg_product_daily_summary agg_product_daily_summary[]
+
+  @@schema("warehouse")
+}
+
+model dim_product {
+  product_key               Int                         @id @default(autoincrement())
+  product_id                String                      @db.VarChar(50)
+  title                     String?                     @db.VarChar(500)
+  description               String?
+  default_sku_id            String?                     @db.VarChar(50)
+  categories                Json?
+  seller_id                 String?                     @db.VarChar(50)
+  valid_from                DateTime?                   @default(now()) @db.Timestamp(6)
+  valid_to                  DateTime?                   @default(dbgenerated("'9999-12-31 00:00:00'::timestamp without time zone")) @db.Timestamp(6)
+  is_current                Boolean?                    @default(true)
+  agg_product_daily_summary agg_product_daily_summary[]
+  dim_sku                   dim_sku[]
+  fact_sales_snapshot       fact_sales_snapshot[]
+
+  @@index([seller_id], map: "idx_dim_product_seller_id")
+  @@schema("warehouse")
+}
+
+model dim_shop {
+  shop_key                  Int                         @id @default(autoincrement())
+  seller_id                 String                      @db.VarChar(50)
+  shop_name                 String?                     @db.VarChar(255)
+  region                    String?                     @db.VarChar(50)
+  shop_rating               Float?
+  followers_count           BigInt?
+  on_sell_product_count     Int?
+  valid_from                DateTime?                   @default(now()) @db.Timestamp(6)
+  valid_to                  DateTime?                   @default(dbgenerated("'9999-12-31 00:00:00'::timestamp without time zone")) @db.Timestamp(6)
+  is_current                Boolean?                    @default(true)
+  agg_product_daily_summary agg_product_daily_summary[]
+  fact_reviews              fact_reviews[]
+  fact_sales_snapshot       fact_sales_snapshot[]
+
+  @@schema("warehouse")
+}
+
+model dim_sku {
+  sku_key                 Int                       @id @default(autoincrement())
+  sku_id                  String                    @db.VarChar(50)
+  product_key             Int
+  sku_sale_props          Json?
+  price_real              Decimal?                  @db.Decimal(18, 2)
+  price_original          Decimal?                  @db.Decimal(18, 2)
+  sku_specification       String?                   @db.VarChar(255)
+  valid_from              DateTime?                 @default(now()) @db.Timestamp(6)
+  valid_to                DateTime?                 @default(dbgenerated("'9999-12-31 00:00:00'::timestamp without time zone")) @db.Timestamp(6)
+  is_current              Boolean?                  @default(true)
+  dim_product             dim_product               @relation(fields: [product_key], references: [product_key], onDelete: NoAction, onUpdate: NoAction)
+  fact_inventory_snapshot fact_inventory_snapshot[]
+  fact_reviews            fact_reviews[]
+
+  @@index([product_key], map: "idx_dim_sku_product_key")
+  @@schema("warehouse")
+}
+
+model fact_inventory_snapshot {
+  inventory_snapshot_key Int      @id @default(autoincrement())
+  sku_key                Int
+  date_key               Int
+  stock                  Int?
+  price_real             Decimal? @db.Decimal(18, 2)
+  dim_sku                dim_sku  @relation(fields: [sku_key], references: [sku_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_fact_inventory_date_key")
+  @@index([sku_key], map: "idx_fact_inventory_sku_key")
+  @@schema("warehouse")
+}
+
+model fact_reviews {
+  review_fact_key  Int       @id @default(autoincrement())
+  sku_key          Int
+  date_key         Int
+  shop_key         Int
+  review_id        String    @unique(map: "uq_fact_reviews_review_id") @db.VarChar(50)
+  rating           Int?
+  review_timestamp DateTime? @db.Timestamptz(6)
+  dim_shop         dim_shop  @relation(fields: [shop_key], references: [shop_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_sku          dim_sku   @relation(fields: [sku_key], references: [sku_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_fact_reviews_date_key")
+  @@index([shop_key], map: "idx_fact_reviews_shop_key")
+  @@index([sku_key], map: "idx_fact_reviews_sku_key")
+  @@schema("warehouse")
+}
+
+model fact_sales_snapshot {
+  sales_snapshot_key Int         @id @default(autoincrement())
+  product_key        Int
+  date_key           Int
+  shop_key           Int
+  sold_count         Int?
+  avg_rating         Float?
+  review_count       Int?
+  price_sale         Decimal?    @db.Decimal(18, 2)
+  dim_product        dim_product @relation(fields: [product_key], references: [product_key], onDelete: NoAction, onUpdate: NoAction)
+  dim_shop           dim_shop    @relation(fields: [shop_key], references: [shop_key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([date_key], map: "idx_fact_sales_date_key")
+  @@index([product_key], map: "idx_fact_sales_product_key")
+  @@index([shop_key], map: "idx_fact_sales_shop_key")
+  @@schema("warehouse")
+}
+
+================
+File: types/schema.ts
+================
+export interface SourceConfig {
+  id: number;
+  source_name: string;
+  base_url: string;
+  is_active: boolean;
+  last_crawl_status: "SUCCESS" | "FAILED" | "PENDING" | null;
+  last_crawl_timestamp: string | null;
+}
+
+export interface CrawlLog {
+  id: number;
+  source_config_id: number;
+  file_name: string;
+  file_path: string;
+  record_count: number;
+  status: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED";
+  error_message?: string;
+  created_at: string;
+}
+
+export interface BaseProduct {
+  id: string;
+  product_id: string;
+  title: string;
+  price_sale: number;
+  sold_count: number;
+  seller_id: string;
+  load_timestamp: string;
+}
+
+================
+File: app/logs/page.tsx
+================
+import { prisma } from "@/lib/prisma";
+import { LogsTable } from "@/components/logs-table";
+
+const ITEMS_PER_PAGE = 10;
+
+export default async function LogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const page = Number(params?.page) || 1;
+  const skip = (page - 1) * ITEMS_PER_PAGE;
+
+  const [logs, totalCount] = await prisma.$transaction([
+    prisma.crawled_files_log.findMany({
+      skip,
+      take: ITEMS_PER_PAGE,
+      orderBy: { id: 'desc' },
+      include: { 
+        source_config: {
+          select: { id: true }
+        }
+      }
+    }),
+    prisma.crawled_files_log.count()
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold">Crawling History</h1>
+      <LogsTable logs={logs as any} totalPages={totalPages} />
+    </div>
+  );
+}
+
+================
+File: app/sources/page.tsx
+================
+import { prisma } from "@/lib/prisma";
+import { CreateSourceModal } from "@/components/create-source-modal";
+import { SourcesTable } from "@/components/sources-table";
+
+const ITEMS_PER_PAGE = 10;
+
+export default async function SourcesPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+    const params = await searchParams;
+    const page = Number(params?.page) || 1;
+    const skip = (page - 1) * ITEMS_PER_PAGE;
+
+    const [sources, totalCount] = await prisma.$transaction([
+        prisma.source_config.findMany({
+            skip: skip,
+            take: ITEMS_PER_PAGE,
+            orderBy: { created_at: 'desc' }
+        }),
+        prisma.source_config.count()
+    ]);
+
+    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold">Source Configurations</h1>
+
+                <CreateSourceModal />
+
+            </div>
+
+            <SourcesTable sources={sources} totalPages={totalPages} />
+        </div>
+    );
+}
+
+
+
+
+
+================================================================
+End of Codebase
+================================================================

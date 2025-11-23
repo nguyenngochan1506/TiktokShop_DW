@@ -69,3 +69,21 @@ export async function updateSource(id: number, formData: FormData) {
     return { error: "Failed to update source." };
   }
 }
+export async function triggerCrawl(sourceId: number) {
+  try {
+    await prisma.source_config.update({
+      where: { id: sourceId },
+      data: {
+        is_active: true,    
+        last_crawl_status: null, 
+        updated_at: new Date(), 
+      },
+    });
+
+    revalidatePath("/sources");
+    return { success: true };
+  } catch (error) {
+    console.error("Trigger crawl error:", error);
+    return { error: "Failed to reset source status for crawling." };
+  }
+}

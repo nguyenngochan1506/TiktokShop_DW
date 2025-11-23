@@ -1,9 +1,51 @@
-"use client";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { DatabaseIcon, AlertCircleIcon, PackageIcon } from "lucide-react";
+import { prisma } from "@/lib/prisma";
+import { serializeData } from "@/lib/utils";
+import { DashboardChart } from "@/components/dashboard-chart";
+import { RecentLogsTable } from "@/components/recent-logs-table"; 
 
-import { Card, CardBody } from "@heroui/card";
-import { DatabaseIcon, ActivityIcon, AlertCircleIcon } from "lucide-react";
+async function getDashboardStats() {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
 
-export default function Dashboard() {
+  const [activeSources, totalProducts, failedJobsToday, recentLogs] = await prisma.$transaction([
+    prisma.source_config.count({ where: { is_active: true } }),
+    
+    prisma.tbl_products_raw.count(),
+    
+    prisma.crawled_files_log.count({
+      where: { status: "FAILED", created_at: { gte: startOfToday } }
+    }),
+
+    prisma.crawled_files_log.findMany({
+      take: 5,
+      orderBy: { created_at: "desc" },
+      include: { source_config: true }
+    })
+  ]);
+  const chartRawData: any[] = await prisma.$queryRaw`
+    SELECT 
+      TO_CHAR(load_timestamp, 'DD/MM') as date, 
+      COUNT(*)::int as count 
+    FROM "staging"."tbl_products_raw"
+    WHERE load_timestamp >= NOW() - INTERVAL '7 days'
+    GROUP BY TO_CHAR(load_timestamp, 'DD/MM'), DATE(load_timestamp)
+    ORDER BY DATE(load_timestamp) ASC
+  `;
+
+  return {
+    activeSources,
+    totalProducts,
+    failedJobsToday,
+    recentLogs: serializeData(recentLogs),
+    chartData: chartRawData 
+  };
+}
+
+export default async function Dashboard() {
+  const stats = await getDashboardStats();
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard Overview</h1>
@@ -11,26 +53,31 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard 
           title="Active Sources" 
-          value="5" 
-          icon={<DatabaseIcon className="text-primary" />} 
+          value={stats.activeSources} 
+          icon={<DatabaseIcon className="text-primary" size={24} />} 
         />
         <StatsCard 
-          title="Total Products" 
-          value="12,450" 
-          icon={<ActivityIcon className="text-success" />} 
+          title="Raw Products" 
+          value={new Intl.NumberFormat('vi-VN').format(stats.totalProducts)} 
+          icon={<PackageIcon className="text-success" size={24} />} 
         />
         <StatsCard 
           title="Failed Jobs Today" 
-          value="2" 
-          icon={<AlertCircleIcon className="text-danger" />} 
+          value={stats.failedJobsToday} 
+          icon={<AlertCircleIcon className="text-danger" size={24} />} 
         />
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">System Health</h2>
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        
+        <DashboardChart data={stats.chartData} />
+
+        <Card className="lg:col-span-1 min-h-[400px]">
+          <CardHeader>
+            <h3 className="font-semibold text-lg">Recent Crawl Activity</h3>
+          </CardHeader>
           <CardBody>
-            <p className="text-default-500">Charts or detailed stats can go here (integration with Fact tables).</p>
+             <RecentLogsTable logs={stats.recentLogs} />
           </CardBody>
         </Card>
       </div>
@@ -45,8 +92,8 @@ const StatsCard = ({ title, value, icon }: any) => (
         {icon}
       </div>
       <div>
-        <p className="text-small text-default-500">{title}</p>
-        <h4 className="text-2xl font-bold">{value}</h4>
+        <p className="text-small text-default-500 uppercase font-bold">{title}</p>
+        <h4 className="text-3xl font-bold">{value}</h4>
       </div>
     </CardBody>
   </Card>
