@@ -43,19 +43,15 @@ export const CreateSourceModal = () => {
               <ModalHeader className="flex flex-col gap-1">Thêm Cấu Hình Nguồn Mới</ModalHeader>
               <ModalBody>
                 {error && <div className="text-danger text-sm">{error}</div>}
-                
+                <div className="text-sm text-default-500 mb-2">
+                    Nguồn mặc định: <span className="font-bold text-foreground">tiktok_shop</span>
+                </div>
+
                 <Input
                   autoFocus
-                  label="Tên Nguồn"
-                  name="source_name"
-                  placeholder="Ví dụ: Shopee Thiết Bị Điện Tử"
-                  variant="bordered"
-                  isRequired
-                />
-                <Input
                   label="URL Gốc (Base URL)"
                   name="base_url"
-                  placeholder="https://shopee.vn/..."
+                  placeholder="https://shop.tiktok.com/view/product/..."
                   variant="bordered"
                   isRequired
                 />
@@ -80,3 +76,4 @@ export const CreateSourceModal = () => {
     </>
   );
 };
+

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { CreateSourceModal } from "@/components/create-source-modal";
 import { SourcesTable } from "@/components/sources-table";
+import { ImportSourcesModal } from "@/components/import-sources-modal";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -28,7 +29,7 @@ export default async function SourcesPage({
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Source Configurations</h1>
-
+                <ImportSourcesModal />
                 <CreateSourceModal />
 
             </div>
