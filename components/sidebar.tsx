@@ -30,6 +30,7 @@ import { Tooltip } from "@heroui/tooltip";
 import { Button } from "@heroui/button";
 import { User } from "@heroui/user";
 import { handleLogout } from "@/app/actions/auth";
+import { ChangePasswordModal } from "./change-password-modal";
 
 // Định nghĩa cấu trúc Menu
 const menuGroups = [
@@ -213,17 +214,21 @@ export const Sidebar = ({ user }: SidebarProps) => {
                     description: "text-[10px] truncate w-[120px]"
                 }}
             />
-            <Tooltip content="Đăng xuất">
-                <Button 
-                    isIconOnly 
-                    size="sm" 
-                    color="danger" 
-                    variant="light" 
-                    onPress={() => handleLogout()}
-                >
-                    <LogOutIcon size={18} />
-                </Button>
-            </Tooltip>
+            <div className="flex items-center">
+                <ChangePasswordModal />
+
+                <Tooltip content="Đăng xuất">
+                    <Button 
+                        isIconOnly 
+                        size="sm" 
+                        color="danger" 
+                        variant="light" 
+                        onPress={() => handleLogout()}
+                    >
+                        <LogOutIcon size={18} />
+                    </Button>
+                </Tooltip>
+            </div>
         </div>
       </div>
     </aside>
