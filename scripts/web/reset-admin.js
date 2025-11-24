@@ -4,13 +4,12 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'admin@gmail.com'; // Email bạn dùng để đăng nhập
-  const password = 'admin123';    // Mật khẩu mới
+  const email = 'admin@gmail.com'; 
+  const password = 'admin123';
   const hashedPassword = await bcrypt.hash(password, 10);
 
   console.log(`Đang reset mật khẩu cho ${email}...`);
 
-  // Dùng upsert: Nếu chưa có thì tạo mới, có rồi thì cập nhật pass
   const user = await prisma.system_users.upsert({
     where: { email: email },
     update: { 

@@ -1,7 +1,7 @@
 "use client";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
-import { Chip } from '@heroui/chip';
+import { Chip, ChipProps } from '@heroui/chip'; // Import thêm ChipProps để type
 import { Pagination } from "@heroui/pagination";
 
 interface Log {
@@ -15,6 +15,13 @@ interface Log {
   source_config: { id: string };
 }
 
+const STATUS_MAP: Record<string, { label: string; color: ChipProps["color"] }> = {
+  SUCCESS: { label: "THÀNH CÔNG", color: "success" },
+  FAILED: { label: "THẤT BẠI", color: "danger" },
+  PENDING: { label: "ĐANG CHỜ", color: "warning" },
+  RUNNING: { label: "ĐANG CHẠY", color: "primary" }, 
+};
+
 export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: number }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -25,6 +32,26 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
     const params = new URLSearchParams(searchParams);
     params.set("page", page.toString());
     router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const renderStatus = (status: string) => {
+    const normalizedStatus = status?.toUpperCase() || "";
+    
+    const config = STATUS_MAP[normalizedStatus];
+
+    if (config) {
+      return (
+        <Chip color={config.color} size="sm" variant="flat">
+          {config.label}
+        </Chip>
+      );
+    }
+
+    return (
+      <Chip color="default" size="sm" variant="flat">
+        {status || "UNKNOWN"}
+      </Chip>
+    );
   };
 
   return (
@@ -57,9 +84,8 @@ export const LogsTable = ({ logs, totalPages }: { logs: Log[], totalPages: numbe
             <TableCell>{log.file_path}</TableCell>
             <TableCell>{log.record_count ?? 0}</TableCell>
             <TableCell>
-              <Chip color={log.status === "SUCCESS" ? "success" : log.status === "FAILED" ? "danger" : "warning"} size="sm" variant="flat">
-                {log.status === "SUCCESS" ? "THÀNH CÔNG" : log.status === "FAILED" ? "THẤT BẠI" : "ĐANG CHẠY"}
-              </Chip>
+              {renderStatus(log.status)}
+              
               {log.error_message && <div className="text-tiny text-danger max-w-[200px] truncate" title={log.error_message}>{log.error_message}</div>}
             </TableCell>
             <TableCell>{log.created_at ? new Date(log.created_at).toLocaleString('vi-VN') : ""}</TableCell>
