@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordActivity } from "./audit";
 
 // 1. Lấy dữ liệu từ điển (Merge giữa Schema thực tế và Note đã lưu)
 export async function getDictionaryData() {
@@ -74,7 +75,8 @@ export async function saveColumnNote(schema: string, table: string, col: string,
         description: desc
       }
     });
-    
+    await recordActivity("UPDATE", "DICTIONARY", `${table}.${col}`, `Cập nhật ghi chú từ điển: ${schema}.${table}.${col}`);
+
     revalidatePath("/dictionary");
     return { success: true };
   } catch (error) {

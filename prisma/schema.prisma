@@ -298,5 +298,22 @@ model system_users {
   role       String   @default("ADMIN") @db.VarChar(20)
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
+  auditLogs system_audit_logs[]
+  @@schema("controller")
+}
+model system_audit_logs {
+  id          BigInt       @id @default(autoincrement())
+  user_id     Int
+  user_email  String       @db.VarChar(255)
+  action      String       @db.VarChar(50)  // VD: CREATE, UPDATE, DELETE, LOGIN
+  entity      String       @db.VarChar(50)  // VD: SOURCE, PRODUCT, USER
+  entity_id   String?      @db.VarChar(50)  // ID của đối tượng bị tác động
+  details     String?      // Mô tả chi tiết: "Đã xóa nguồn ABC"
+  metadata    Json?        // Lưu dữ liệu cũ/mới (để so sánh nếu cần)
+  created_at  DateTime     @default(now()) @db.Timestamptz(6)
+  
+  // Quan hệ
+  user        system_users @relation(fields: [user_id], references: [id])
+
   @@schema("controller")
 }

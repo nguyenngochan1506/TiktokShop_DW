@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordActivity } from "./audit";
 
 // Định nghĩa các cài đặt mặc định của hệ thống
 const DEFAULT_SETTINGS = [
@@ -9,12 +10,12 @@ const DEFAULT_SETTINGS = [
   { key: "DQ_CRITICAL_WEIGHT", value: "2.0", type: "number", group: "DATA_QUALITY", description: "Hệ số nhân điểm trừ cho lỗi nghiêm trọng (Critical)" },
   { key: "DQ_STALE_HOURS", value: "24", type: "number", group: "DATA_QUALITY", description: "Số giờ tối đa chấp nhận dữ liệu cũ trước khi báo lỗi Stale Data" },
   { key: "DASHBOARD_DAYS_LOOKBACK", value: "7", type: "number", group: "GENERAL", description: "Số ngày mặc định hiển thị trên biểu đồ Dashboard" },
-  { 
-    key: "JOB_STUCK_THRESHOLD_MINUTES", 
-    value: "60", 
-    type: "number", 
-    group: "CRAWLER", 
-    description: "Nếu Job chạy quá số phút này mà chưa xong, coi như bị treo (Stuck) để cho phép chạy lại." 
+  {
+    key: "JOB_STUCK_THRESHOLD_MINUTES",
+    value: "60",
+    type: "number",
+    group: "CRAWLER",
+    description: "Nếu Job chạy quá số phút này mà chưa xong, coi như bị treo (Stuck) để cho phép chạy lại."
   },
   { key: "MAINTENANCE_MODE", value: "false", type: "boolean", group: "GENERAL", description: "Bật chế độ bảo trì hệ thống" },
 ];
@@ -48,12 +49,19 @@ export async function getAllSettings() {
 // 2. Cập nhật Setting
 export async function updateSetting(key: string, value: string) {
   try {
+    const oldSetting = await prisma.system_settings.findUnique({ where: { key } });
+
     await prisma.system_settings.update({
       where: { key },
-      data: { 
-        value, 
-        updated_at: new Date() 
+      data: {
+        value,
+        updated_at: new Date()
       }
+    });
+
+    await recordActivity("UPDATE", "SETTING", key, `Thay đổi cấu hình ${key}`, {
+      old_value: oldSetting?.value,
+      new_value: value
     });
     revalidatePath("/settings");
     revalidatePath("/data-quality"); // Refresh các trang có dùng config
@@ -74,7 +82,7 @@ export async function getConfig<T>(key: string, defaultValue: T): Promise<T> {
 
   if (setting.type === 'number') return Number(setting.value) as T;
   if (setting.type === 'boolean') return (setting.value === 'true') as T;
-  
+
   return setting.value as T;
 }
 
@@ -90,14 +98,14 @@ export async function purgeOldData(retentionDays: number, target: 'RAW' | 'LOGS'
         where: { load_timestamp: { lt: dateThreshold } }
       });
       deletedCount = res.count;
-    } 
+    }
     else if (target === 'LOGS') {
       const res = await prisma.crawled_files_log.deleteMany({
         where: { created_at: { lt: dateThreshold } }
       });
       deletedCount = res.count;
     }
-
+    await recordActivity("DELETE", "MAINTENANCE", target, `Dọn dẹp (Purge) dữ liệu ${target} cũ hơn ${retentionDays} ngày`);
     revalidatePath("/system-health");
     return { success: true, count: deletedCount };
   } catch (error) {

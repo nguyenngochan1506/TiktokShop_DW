@@ -20,7 +20,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
   providers: [
     Credentials({
       async authorize(credentials) {
-        console.log("--> [LOGIN CHECK] Bắt đầu kiểm tra...");
         
         const parsedCredentials = z
           .object({ email: z.string().email(), password: z.string().min(6) })
@@ -28,34 +27,23 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data;
-          console.log(`--> [LOGIN CHECK] Email: ${email}`);
           
           const user = await getUser(email);
           if (!user) {
-            console.log("--> [LOGIN CHECK] LỖI: Không tìm thấy User trong DB.");
             return null;
           }
 
-          console.log("--> [LOGIN CHECK] User tìm thấy. Đang so sánh mật khẩu...");
           const passwordsMatch = await bcrypt.compare(password, user.password);
           
           if (passwordsMatch) {
-            console.log("--> [LOGIN CHECK] Mật khẩu đúng! Đăng nhập thành công.");
-            
-            // --- SỬA LỖI TYPESCRIPT TẠI ĐÂY ---
             return {
-              id: user.id.toString(), // Chuyển id thành string để khớp với NextAuth
+              id: user.id.toString(),
               name: user.name,
               email: user.email,
               role: user.role,
             };
-          } else {
-             console.log("--> [LOGIN CHECK] LỖI: Sai mật khẩu.");
           }
-        } else {
-            console.log("--> [LOGIN CHECK] LỖI: Validate dữ liệu đầu vào thất bại.");
         }
-
         return null;
       },
     }),
@@ -74,6 +62,25 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         session.user.role = token.role as string;
       }
       return session;
+    },
+    async signIn({ user, account }) {
+        if (user) {
+            try {
+                await prisma.system_audit_logs.create({
+                    data: {
+                        user_id: parseInt(user.id || "0"),
+                        user_email: user.email || "unknown",
+                        action: "LOGIN",
+                        entity: "AUTH",
+                        details: "Người dùng đăng nhập vào hệ thống",
+                        created_at: new Date()
+                    }
+                });
+            } catch (e) {
+                console.error("Login Log Error", e);
+            }
+        }
+        return true;
     },
   },
 });

@@ -19,7 +19,8 @@ import {
   ShieldCheckIcon,
   BookOpenIcon,
   PanelLeftClose,
-  LogOutIcon
+  LogOutIcon,
+  UserIcon
 } from "lucide-react";
 import { ThemeSwitch } from "./theme-switch";
 import { CommandPalette } from "./command-palette";
@@ -76,9 +77,18 @@ const menuGroups = [
       { name: "Chất Lượng Dữ Liệu", href: "/data-quality", icon: ShieldCheckIcon },
       { name: "Sức Khỏe Hệ Thống", href: "/system-health", icon: ActivityIcon },
       { name: "Từ Điển Dữ Liệu", href: "/dictionary", icon: BookOpenIcon },
-      { name: "Cấu Hình Hệ Thống", href: "/settings", icon: SettingsIcon }
+      { name: "Cấu Hình Hệ Thống", href: "/settings", icon: SettingsIcon },
     ]
   },
+  {
+    key: "admin",
+    title: "Administration",
+    icon: ShieldCheckIcon,
+    items: [
+      { name: "Quản Lý Thành Viên", href: "/admin/users", icon: UserIcon },
+      { name: "Nhật Ký Hoạt Động", href: "/admin/activity", icon: FileTextIcon },
+    ]
+},
 ];
 
 interface SidebarProps {
